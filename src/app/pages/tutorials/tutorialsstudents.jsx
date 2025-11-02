@@ -199,30 +199,7 @@ const StudentTutorialPage = () => {
               <p className={`text-xl md:text-2xl mb-8 max-w-3xl mx-auto ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                 Step-by-step guide for students to register and receive their Instipass digital ID
               </p>
-              <motion.div 
-                className="flex flex-col sm:flex-row justify-center gap-4"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, delay: 0.6 }}
-              >
-                <motion.button
-                  onClick={() => setIsBookDemoOpen(true)}
-                  className="px-8 py-4 bg-gradient-to-r from-[#2A9D8F] to-[#1D3557] text-white text-lg font-medium rounded-lg shadow-xl cursor-pointer z-10"
-                  whileHover={{ scale: 1.05, boxShadow: "0 15px 30px rgba(0, 0, 0, 0.2)" }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <Calendar className="inline-block mr-2" size={20} />
-                  Get Started
-                </motion.button>
-                <motion.button
-                  onClick={() => scrollToSection(featuresRef)}
-                  className="px-8 py-4 bg-white bg-opacity-20 backdrop-blur-sm text-white text-lg font-medium rounded-lg border border-white border-opacity-30 shadow-lg z-10" 
-                  whileHover={{ scale: 1.05, backgroundColor: "rgba(255,255,255,0.3)" }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  View Tutorial <ChevronRight className="inline ml-1" size={20} />
-                </motion.button>
-              </motion.div>
+             
             </motion.div>
           </div>
         </section>
