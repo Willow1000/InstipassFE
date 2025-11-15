@@ -148,13 +148,6 @@ const HomeNavbar = () => {
               <Shield size={16} className="mr-2" /> Benefits
             </Link>
             <Link 
-              href="#roi-calculator" 
-              className="hover:text-[#2A9D8F] transition-colors py-2 border-b border-gray-200 dark:border-gray-700 flex items-center"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              <Calendar size={16} className="mr-2" /> ROI Calculator
-            </Link>
-            <Link 
               href="#testimonials" 
               className="hover:text-[#2A9D8F] transition-colors py-2 border-b border-gray-200 dark:border-gray-700 flex items-center"
               onClick={() => setMobileMenuOpen(false)}
