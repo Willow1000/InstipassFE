@@ -1,53 +1,88 @@
-# Ignore Python bytecode
-*.pyc
-*.pyo
-__pycache__/
-*.pyd
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# Ignore virtual environment
-venv/
-.env/
-*.env
-virt/
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+.pnp.cjs
 
-# Ignore Django migrations except __init__.py
-**/migrations/
-!**/migrations/__init__.py
+# testing
+/coverage
 
-# Ignore database files
-*.sqlite3
-db.sqlite3
+# next.js
+/.next
+/out/
 
-# Ignore Django secret key and environment variables
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# local env files
+.env*.local
 .env
-*.env
 
-# Ignore compiled static files
-staticfiles/
-static/
-media/
+# vercel
+.vercel
 
-# Ignore logs
-*.log
-*.out
+# typescript
+*.tsbuildinfo
+next-env.d.ts
 
-# Ignore IDE/editor files
+# IDE
 .vscode/
 .idea/
-*.sublime-workspace
+*.swp
+*.swo
 
-# Ignore Node modules (if frontend assets exist)
-node_modules/
+# OS
+Thumbs.db
 
-# Ignore Docker files (if using Docker)
-docker-compose.override.yml
+# Logs
+logs
+*.log
 
-# Ignore coverage reports
-htmlcov/
-.coverage
-*.cover
-coverage.xml
+# Cache
+.cache/
+.parcel-cache/
 
-# dev shell scripts
-*.sh
-drafts/
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Microbundle cache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# dotenv environment variables file
+.env.development.local
+.env.test.local
+.env.production.local
+.env.local
