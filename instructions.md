@@ -1,5 +1,5 @@
 # INstructions
-When a user receives a new unread notification, the notifications icon should read the number of unread notifications,
+I want report Issue to be an option like the other options in the navigation menu, it should be removed from the notifications section
 
 # Code
 "use client";
@@ -332,7 +332,7 @@ const useSettingsData = (token) => {
 };
 
 const useNotificationsData = (token) => {
-  const { data: notificationsData, error: notificationsError, isLoading: notificationsLoading } = useSWR(
+  const { data: notificationsData, error: notificationsError, isLoading: notificationsLoading, mutate: mutateNotifications } = useSWR(
     token ? [NOTIFICATIONS_API_URL, token] : null, 
     fetcher, 
     {
@@ -347,7 +347,7 @@ const useNotificationsData = (token) => {
     }
   );
 
-  return { notificationsData, notificationsError, notificationsLoading };
+  return { notificationsData, notificationsError, notificationsLoading, mutateNotifications };
 };
 
 const useBalancesData = (token) => {
@@ -388,6 +388,22 @@ const StatCard = ({ title, value, icon, darkMode, colorClass = '' }) => (
       </h3>
     </div>
   </motion.div>
+);
+
+// Notification Bell Component with Badge
+const NotificationBell = ({ darkMode, unreadCount, onClick }) => (
+  <button 
+    onClick={onClick}
+    className={`relative p-2 rounded-lg transition-colors ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+    title={`${unreadCount} unread notifications`}
+  >
+    <Bell size={20} className={darkMode ? 'text-gray-300' : 'text-gray-600'} />
+    {unreadCount > 0 && (
+      <span className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full text-xs w-5 h-5 flex items-center justify-center font-medium">
+        {unreadCount > 9 ? '9+' : unreadCount}
+      </span>
+    )}
+  </button>
 );
 
 // Payment Balance Section Component - UPDATED
@@ -2645,663 +2661,663 @@ const TemplateSettingsPage = ({ settingsData, loading, error, darkMode, onUpdate
                   <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                     Minimum Admission Year
                   </label>
-                  <input
-                    type="number"
-                    name="min_admission_year"
-                    value={formData.min_admission_year}
+                    <input
+                      type="number"
+                      name="min_admission_year"
+                      value={formData.min_admission_year}
+                      onChange={handleInputChange}
+                      min="2020"
+                      max={currentYear}
+                      className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent ${
+                        darkMode 
+                          ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
+                          : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+                      }`}
+                      required
+                    />
+                    <p className={`mt-1 text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                      Must be between 2020 and {currentYear}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Notification Preference */}
+                <div>
+                  <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Notification Preference
+                  </label>
+                  <select
+                    name="notification_pref"
+                    value={formData.notification_pref}
                     onChange={handleInputChange}
-                    min="2020"
-                    max={currentYear}
                     className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent ${
                       darkMode 
-                        ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
-                        : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+                        ? 'bg-gray-700 border-gray-600 text-white' 
+                        : 'bg-white border-gray-300 text-gray-900'
                     }`}
                     required
-                  />
-                  <p className={`mt-1 text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                    Must be between 2020 and {currentYear}
-                  </p>
-                </div>
-              </div>
-
-              {/* Notification Preference */}
-              <div>
-                <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                  Notification Preference
-                </label>
-                <select
-                  name="notification_pref"
-                  value={formData.notification_pref}
-                  onChange={handleInputChange}
-                  className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent ${
-                    darkMode 
-                      ? 'bg-gray-700 border-gray-600 text-white' 
-                      : 'bg-white border-gray-300 text-gray-900'
-                  }`}
-                  required
-                >
-                  <option value="">Select Notification Preference</option>
-                  {NOTIFICATION_CHOICES.map((choice) => (
-                    <option key={choice.value} value={choice.value}>{choice.label}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Courses Offered */}
-              <div>
-                <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                  Courses Offered
-                </label>
-                
-                {/* Input Mode Toggle */}
-                <div className="flex space-x-2 mb-3">
-                  <button
-                    type="button"
-                    onClick={() => setCourseInputMode('single')}
-                    className={`px-3 py-1 rounded text-sm font-medium ${
-                      courseInputMode === 'single'
-                        ? darkMode ? 'bg-blue-600 text-white' : 'bg-blue-500 text-white'
-                        : darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'
-                    }`}
                   >
-                    Single Entry
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setCourseInputMode('bulk')}
-                    className={`px-3 py-1 rounded text-sm font-medium ${
-                      courseInputMode === 'bulk'
-                        ? darkMode ? 'bg-blue-600 text-white' : 'bg-blue-500 text-white'
-                        : darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'
-                    }`}
-                  >
-                    Bulk Entry
-                  </button>
+                    <option value="">Select Notification Preference</option>
+                    {NOTIFICATION_CHOICES.map((choice) => (
+                      <option key={choice.value} value={choice.value}>{choice.label}</option>
+                    ))}
+                  </select>
                 </div>
 
-                {courseInputMode === 'single' ? (
-                  <div className="flex space-x-2 mb-2">
-                    <input 
-                      type="text" 
-                      value={newCourse}
-                      onChange={(e) => setNewCourse(e.target.value)}
-                      onKeyPress={handleCourseKeyPress}
-                      className={`flex-1 px-3 py-2 rounded-lg ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-800'} focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-colors`}
-                      placeholder="Enter course name"
-                      disabled={isSubmitting}
-                    />
-                    <button 
+                {/* Courses Offered */}
+                <div>
+                  <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Courses Offered
+                  </label>
+                  
+                  {/* Input Mode Toggle */}
+                  <div className="flex space-x-2 mb-3">
+                    <button
                       type="button"
-                      onClick={handleAddCourse}
-                      className={`px-4 py-2 rounded-lg ${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'} text-white font-medium`}
-                      disabled={isSubmitting}
+                      onClick={() => setCourseInputMode('single')}
+                      className={`px-3 py-1 rounded text-sm font-medium ${
+                        courseInputMode === 'single'
+                          ? darkMode ? 'bg-blue-600 text-white' : 'bg-blue-500 text-white'
+                          : darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'
+                      }`}
                     >
-                      Add
+                      Single Entry
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCourseInputMode('bulk')}
+                      className={`px-3 py-1 rounded text-sm font-medium ${
+                        courseInputMode === 'bulk'
+                          ? darkMode ? 'bg-blue-600 text-white' : 'bg-blue-500 text-white'
+                          : darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'
+                      }`}
+                    >
+                      Bulk Entry
                     </button>
                   </div>
-                ) : (
-                  <div className="mb-2">
-                    <textarea
-                      value={bulkCoursesText}
-                      onChange={(e) => setBulkCoursesText(e.target.value)}
-                      onPaste={handleBulkCoursePaste}
-                      className={`w-full px-3 py-2 rounded-lg ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-800'} focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-colors`}
-                      placeholder="Enter courses (one per line)"
-                      rows={4}
-                      disabled={isSubmitting}
-                    />
-                    <div className="flex space-x-2 mt-2">
+
+                  {courseInputMode === 'single' ? (
+                    <div className="flex space-x-2 mb-2">
+                      <input 
+                        type="text" 
+                        value={newCourse}
+                        onChange={(e) => setNewCourse(e.target.value)}
+                        onKeyPress={handleCourseKeyPress}
+                        className={`flex-1 px-3 py-2 rounded-lg ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-800'} focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-colors`}
+                        placeholder="Enter course name"
+                        disabled={isSubmitting}
+                      />
                       <button 
                         type="button"
-                        onClick={handleAddBulkCourses}
+                        onClick={handleAddCourse}
                         className={`px-4 py-2 rounded-lg ${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'} text-white font-medium`}
                         disabled={isSubmitting}
                       >
-                        Add All Courses
-                      </button>
-                      <button 
-                        type="button"
-                        onClick={() => setBulkCoursesText('')}
-                        className={`px-4 py-2 rounded-lg ${darkMode ? 'bg-gray-600 hover:bg-gray-700 text-white' : 'bg-gray-300 hover:bg-gray-400 text-gray-700 font-medium'} `}
-                        disabled={isSubmitting}
-                      >
-                        Clear
+                        Add
                       </button>
                     </div>
-                  </div>
-                )}
-                
-                {formData.courses_offered.length > 0 && (
-                  <div className={`mt-2 p-3 rounded-lg ${darkMode ? 'bg-gray-700 border border-gray-600' : 'bg-gray-100 border border-gray-300'}`}>
-                    <div className="flex justify-between items-center mb-2">
-                      <h4 className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                        Added Courses ({formData.courses_offered.length})
-                      </h4>
-                      <button 
-                        type="button"
-                        onClick={handleClearAllCourses}
-                        className={`text-xs ${darkMode ? 'text-red-400 hover:text-red-300' : 'text-red-600 hover:text-red-800'} font-medium`}
-                        disabled={isSubmitting}
-                      >
-                        Clear All
-                      </button>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-32 overflow-y-auto">
-                      {formData.courses_offered.map((course, index) => (
-                        <div 
-                          key={index}
-                          className={`flex items-center justify-between px-3 py-2 rounded text-sm ${
-                            darkMode ? 'bg-gray-600 text-gray-200 border border-gray-500' : 'bg-white text-gray-700 border border-gray-300'
-                          }`}
-                        >
-                          <span className="truncate" title={course}>{course}</span>
-                          <button 
-                            type="button"
-                            onClick={() => handleRemoveCourse(course)}
-                            className="ml-2 text-xs font-bold hover:text-red-500 flex-shrink-0"
-                            disabled={isSubmitting}
-                          >
-                            ×
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Template Front Upload */}
-              <FileUploadField
-                label="Front Template (Optional)"
-                name="template_front"
-                value={fileUploads.template_front}
-                onChange={(file) => {
-                  if (file) {
-                    handleFileChange('template_front', file);
-                  } else {
-                    clearFile('template_front');
-                  }
-                }}
-                accept="image/jpeg,image/png,image/gif,image/svg+xml"
-                darkMode={darkMode}
-                disabled={isSubmitting}
-                previewUrl={templateFrontPreview}
-                existingFileUrl={settings?.template_front}
-                maxSizeMB={5}
-                fileType="image"
-              />
-
-              {/* Template Back Upload */}
-              <FileUploadField
-                label="Back Template (Optional)"
-                name="template_back"
-                value={fileUploads.template_back}
-                onChange={(file) => {
-                  if (file) {
-                    handleFileChange('template_back', file);
-                  } else {
-                    clearFile('template_back');
-                  }
-                }}
-                accept="image/jpeg,image/png,image/gif,image/svg+xml"
-                darkMode={darkMode}
-                disabled={isSubmitting}
-                previewUrl={templateBackPreview}
-                existingFileUrl={settings?.template_back}
-                maxSizeMB={5}
-                fileType="image"
-              />
-
-              {/* Configuration Data Upload */}
-              <FileUploadField
-                label="Configuration Data (Optional)"
-                name="conf_data"
-                value={fileUploads.conf_data}
-                onChange={(file) => {
-                  if (file) {
-                    handleFileChange('conf_data', file);
-                  } else {
-                    clearFile('conf_data');
-                  }
-                }}
-                accept=".xlsx,.csv,.json"
-                darkMode={darkMode}
-                disabled={isSubmitting}
-                existingFileUrl={settings?.conf_data}
-                maxSizeMB={10}
-                fileType="document"
-              />
-
-              {/* Submit Buttons */}
-              <div className="flex justify-end space-x-3 mt-6">
-                <button
-                  type="button"
-                  onClick={handleCancel}
-                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                    darkMode 
-                      ? 'bg-gray-600 text-white hover:bg-gray-700' 
-                      : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
-                  }`}
-                  disabled={isSubmitting}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center ${
-                    hasChanges && !isSubmitting
-                      ? 'bg-teal-600 text-white hover:bg-teal-700' 
-                      : 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                  }`}
-                  disabled={!hasChanges || isSubmitting}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
-                      Updating...
-                    </>
                   ) : (
-                    <>
-                      <Save size={16} className="mr-2" />
-                      Update Settings
-                    </>
+                    <div className="mb-2">
+                      <textarea
+                        value={bulkCoursesText}
+                        onChange={(e) => setBulkCoursesText(e.target.value)}
+                        onPaste={handleBulkCoursePaste}
+                        className={`w-full px-3 py-2 rounded-lg ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-800'} focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-colors`}
+                        placeholder="Enter courses (one per line)"
+                        rows={4}
+                        disabled={isSubmitting}
+                      />
+                      <div className="flex space-x-2 mt-2">
+                        <button 
+                          type="button"
+                          onClick={handleAddBulkCourses}
+                          className={`px-4 py-2 rounded-lg ${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'} text-white font-medium`}
+                          disabled={isSubmitting}
+                        >
+                          Add All Courses
+                        </button>
+                        <button 
+                          type="button"
+                          onClick={() => setBulkCoursesText('')}
+                          className={`px-4 py-2 rounded-lg ${darkMode ? 'bg-gray-600 hover:bg-gray-700 text-white' : 'bg-gray-300 hover:bg-gray-400 text-gray-700 font-medium'} `}
+                          disabled={isSubmitting}
+                        >
+                          Clear
+                        </button>
+                      </div>
+                    </div>
                   )}
-                </button>
-              </div>
-
-              {hasChanges && (
-                <div className="mt-2 text-xs text-teal-600 dark:text-teal-400">
-                  Changes detected — submit button enabled
+                  
+                  {formData.courses_offered.length > 0 && (
+                    <div className={`mt-2 p-3 rounded-lg ${darkMode ? 'bg-gray-700 border border-gray-600' : 'bg-gray-100 border border-gray-300'}`}>
+                      <div className="flex justify-between items-center mb-2">
+                        <h4 className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                          Added Courses ({formData.courses_offered.length})
+                        </h4>
+                        <button 
+                          type="button"
+                          onClick={handleClearAllCourses}
+                          className={`text-xs ${darkMode ? 'text-red-400 hover:text-red-300' : 'text-red-600 hover:text-red-800'} font-medium`}
+                          disabled={isSubmitting}
+                        >
+                          Clear All
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-32 overflow-y-auto">
+                        {formData.courses_offered.map((course, index) => (
+                          <div 
+                            key={index}
+                            className={`flex items-center justify-between px-3 py-2 rounded text-sm ${
+                              darkMode ? 'bg-gray-600 text-gray-200 border border-gray-500' : 'bg-white text-gray-700 border border-gray-300'
+                            }`}
+                          >
+                            <span className="truncate" title={course}>{course}</span>
+                            <button 
+                              type="button"
+                              onClick={() => handleRemoveCourse(course)}
+                              className="ml-2 text-xs font-bold hover:text-red-500 flex-shrink-0"
+                              disabled={isSubmitting}
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
-            </form>
-          ) : (
-            // View Mode - Display current settings
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="flex items-start space-x-3">
-                  <QrCode className="text-teal-600 dark:text-teal-400 mt-1" size={18} />
-                  <div>
-                    <p className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>QR Code</p>
-                    <p className={`text-base ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                      {settings.qrcode ? 'Enabled' : 'Disabled'}
-                    </p>
+
+                {/* Template Front Upload */}
+                <FileUploadField
+                  label="Front Template (Optional)"
+                  name="template_front"
+                  value={fileUploads.template_front}
+                  onChange={(file) => {
+                    if (file) {
+                      handleFileChange('template_front', file);
+                    } else {
+                      clearFile('template_front');
+                    }
+                  }}
+                  accept="image/jpeg,image/png,image/gif,image/svg+xml"
+                  darkMode={darkMode}
+                  disabled={isSubmitting}
+                  previewUrl={templateFrontPreview}
+                  existingFileUrl={settings?.template_front}
+                  maxSizeMB={5}
+                  fileType="image"
+                />
+
+                {/* Template Back Upload */}
+                <FileUploadField
+                  label="Back Template (Optional)"
+                  name="template_back"
+                  value={fileUploads.template_back}
+                  onChange={(file) => {
+                    if (file) {
+                      handleFileChange('template_back', file);
+                    } else {
+                      clearFile('template_back');
+                    }
+                  }}
+                  accept="image/jpeg,image/png,image/gif,image/svg+xml"
+                  darkMode={darkMode}
+                  disabled={isSubmitting}
+                  previewUrl={templateBackPreview}
+                  existingFileUrl={settings?.template_back}
+                  maxSizeMB={5}
+                  fileType="image"
+                />
+
+                {/* Configuration Data Upload */}
+                <FileUploadField
+                  label="Configuration Data (Optional)"
+                  name="conf_data"
+                  value={fileUploads.conf_data}
+                  onChange={(file) => {
+                    if (file) {
+                      handleFileChange('conf_data', file);
+                    } else {
+                      clearFile('conf_data');
+                    }
+                  }}
+                  accept=".xlsx,.csv,.json"
+                  darkMode={darkMode}
+                  disabled={isSubmitting}
+                  existingFileUrl={settings?.conf_data}
+                  maxSizeMB={10}
+                  fileType="document"
+                />
+
+                {/* Submit Buttons */}
+                <div className="flex justify-end space-x-3 mt-6">
+                  <button
+                    type="button"
+                    onClick={handleCancel}
+                    className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                      darkMode 
+                        ? 'bg-gray-600 text-white hover:bg-gray-700' 
+                        : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+                    }`}
+                    disabled={isSubmitting}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center ${
+                      hasChanges && !isSubmitting
+                        ? 'bg-teal-600 text-white hover:bg-teal-700' 
+                        : 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                    }`}
+                    disabled={!hasChanges || isSubmitting}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
+                        Updating...
+                      </>
+                    ) : (
+                      <>
+                        <Save size={16} className="mr-2" />
+                        Update Settings
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {hasChanges && (
+                  <div className="mt-2 text-xs text-teal-600 dark:text-teal-400">
+                    Changes detected — submit button enabled
+                  </div>
+                )}
+              </form>
+            ) : (
+              // View Mode - Display current settings
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="flex items-start space-x-3">
+                    <QrCode className="text-teal-600 dark:text-teal-400 mt-1" size={18} />
+                    <div>
+                      <p className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>QR Code</p>
+                      <p className={`text-base ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                        {settings.qrcode ? 'Enabled' : 'Disabled'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start space-x-3">
+                    <BarChart3 className="text-teal-600 dark:text-teal-400 mt-1" size={18} />
+                    <div>
+                      <p className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Barcode</p>
+                      <p className={`text-base ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                        {settings.barcode ? 'Enabled' : 'Disabled'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start space-x-3">
+                    <Users className="text-teal-600 dark:text-teal-400 mt-1" size={18} />
+                    <div>
+                      <p className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Expected Students</p>
+                      <p className={`text-base ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                        {settings.expected_total?.toLocaleString() || 0}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start space-x-3">
+                    <Calendar className="text-teal-600 dark:text-teal-400 mt-1" size={18} />
+                    <div>
+                      <p className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Min Admission Year</p>
+                      <p className={`text-base ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                        {settings.min_admission_year}
+                      </p>
+                    </div>
                   </div>
                 </div>
 
                 <div className="flex items-start space-x-3">
-                  <BarChart3 className="text-teal-600 dark:text-teal-400 mt-1" size={18} />
+                  <Bell className="text-teal-600 dark:text-teal-400 mt-1" size={18} />
                   <div>
-                    <p className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Barcode</p>
+                    <p className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Notification Preference</p>
                     <p className={`text-base ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                      {settings.barcode ? 'Enabled' : 'Disabled'}
+                      {NOTIFICATION_CHOICES.find(choice => choice.value === settings.notification_pref)?.label || settings.notification_pref}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-start space-x-3">
-                  <Users className="text-teal-600 dark:text-teal-400 mt-1" size={18} />
-                  <div>
-                    <p className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Expected Students</p>
-                    <p className={`text-base ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                      {settings.expected_total?.toLocaleString() || 0}
-                    </p>
-                  </div>
+                {/* Enhanced Courses Display */}
+                <CoursesDisplay 
+                  courses={settings.courses_offered} 
+                  darkMode={darkMode}
+                  onEdit={() => setIsEditing(true)}
+                  isEditing={true}
+                />
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {settings.template_front && (
+                    <div className="flex items-start space-x-3">
+                      <ImageIcon className="text-teal-600 dark:text-teal-400 mt-1" size={18} />
+                      <div>
+                        <p className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Front Template</p>
+                        <img 
+                          src={settings.template_front} 
+                          alt="Front Template" 
+                          className="w-48 h-32 object-contain border rounded mt-2"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {settings.template_back && (
+                    <div className="flex items-start space-x-3">
+                      <ImageIcon className="text-teal-600 dark:text-teal-400 mt-1" size={18} />
+                      <div>
+                        <p className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Back Template</p>
+                        <img 
+                          src={settings.template_back} 
+                          alt="Back Template" 
+                          className="w-48 h-32 object-contain border rounded mt-2"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
+
+                {settings.conf_data && (
+                  <div className="flex items-start space-x-3">
+                    <FileText className="text-teal-600 dark:text-teal-400 mt-1" size={18} />
+                    <div>
+                      <p className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Configuration Data</p>
+                      <p className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                        Configuration file uploaded
+                      </p>
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex items-start space-x-3">
                   <Calendar className="text-teal-600 dark:text-teal-400 mt-1" size={18} />
                   <div>
-                    <p className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Min Admission Year</p>
-                    <p className={`text-base ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                      {settings.min_admission_year}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-start space-x-3">
-                <Bell className="text-teal-600 dark:text-teal-400 mt-1" size={18} />
-                <div>
-                  <p className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Notification Preference</p>
-                  <p className={`text-base ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                    {NOTIFICATION_CHOICES.find(choice => choice.value === settings.notification_pref)?.label || settings.notification_pref}
-                  </p>
-                </div>
-              </div>
-
-              {/* Enhanced Courses Display */}
-              <CoursesDisplay 
-                courses={settings.courses_offered} 
-                darkMode={darkMode}
-                onEdit={() => setIsEditing(true)}
-                isEditing={true}
-              />
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {settings.template_front && (
-                  <div className="flex items-start space-x-3">
-                    <ImageIcon className="text-teal-600 dark:text-teal-400 mt-1" size={18} />
-                    <div>
-                      <p className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Front Template</p>
-                      <img 
-                        src={settings.template_front} 
-                        alt="Front Template" 
-                        className="w-48 h-32 object-contain border rounded mt-2"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {settings.template_back && (
-                  <div className="flex items-start space-x-3">
-                    <ImageIcon className="text-teal-600 dark:text-teal-400 mt-1" size={18} />
-                    <div>
-                      <p className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Back Template</p>
-                      <img 
-                        src={settings.template_back} 
-                        alt="Back Template" 
-                        className="w-48 h-32 object-contain border rounded mt-2"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {settings.conf_data && (
-                <div className="flex items-start space-x-3">
-                  <FileText className="text-teal-600 dark:text-teal-400 mt-1" size={18} />
-                  <div>
-                    <p className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Configuration Data</p>
+                    <p className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Last Updated</p>
                     <p className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                      Configuration file uploaded
+                      {settings.updated_at ? new Date(settings.updated_at).toLocaleString() : 'Never'}
                     </p>
                   </div>
                 </div>
-              )}
-
-              <div className="flex items-start space-x-3">
-                <Calendar className="text-teal-600 dark:text-teal-400 mt-1" size={18} />
-                <div>
-                  <p className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Last Updated</p>
-                  <p className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                    {settings.updated_at ? new Date(settings.updated_at).toLocaleString() : 'Never'}
-                  </p>
-                </div>
+              </div>
+            )
+          ) : (
+            <div className="text-center py-8 flex flex-col gap-7">
+              <div>
+                <Settings className={`mx-auto mb-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} size={48} />
+                <p className={`${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                  Institution settings not configured
+                </p>
+              </div>
+              <div className="text-center">
+                <a
+                  href='/institution/settings'
+                  className="px-8 bg-teal-600 hover:bg-teal-700 py-3 rounded-lg text-white font-semibold shadow-md transition-all duration-300"
+                >
+                  Configure Settings
+                </a>
               </div>
             </div>
-          )
-        ) : (
-          <div className="text-center py-8 flex flex-col gap-7">
-            <div>
-              <Settings className={`mx-auto mb-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} size={48} />
-              <p className={`${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                Institution settings not configured
-              </p>
-            </div>
-            <div className="text-center">
-              <a
-                href='/institution/settings'
-                className="px-8 bg-teal-600 hover:bg-teal-700 py-3 rounded-lg text-white font-semibold shadow-md transition-all duration-300"
-              >
-                Configure Settings
-              </a>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-// Dashboard Page Component
-const DashboardPage = ({ students, loading, error, darkMode, refreshData, settingsData, settingsLoading, institutionData, onSuccess }) => {
-  const [searchName, setSearchName] = useState('');
-  const [searchRegNo, setSearchRegNo] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
-  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
-  const { balancesData } = useBalancesData(token);
-
-  const debouncedSetSearchName = useCallback(debounce(setSearchName, 300), []);
-  const debouncedSetSearchRegNo = useCallback(debounce(setSearchRegNo, 300), []);
-
-  // Calculate summary stats
-  const summaryStats = useMemo(() => {
-    if (!students) {
-      return {
-        totalSubmitted: 0,
-        pending: 0,
-        processing: 0,
-        ready: 0,
-        expected: 0
-      };
-    }
-
-    const totalSubmitted = students.length;
-    const pending = students.filter(s => s.status === 'pending').length;
-    const processing = students.filter(s => s.status === 'processing').length;
-    const ready = students.filter(s => s.status === 'ready' || s.status === 'id_ready').length;
-    
-    // Get expected total from settings data
-    const settings = Array.isArray(settingsData) && settingsData.length > 0 ? settingsData[0] : null;
-    const expected = settings?.expected_total || 0;
-
-    return { totalSubmitted, pending, processing, ready, expected };
-  }, [students, settingsData]);
-
-  // Filter students based on search and status
-  const filteredStudents = useMemo(() => {
-    if (!students) return [];
-    
-    return students.filter(student => {
-      const nameMatch = searchName === '' || 
-        `${student.first_name} ${student.last_name}`.toLowerCase().includes(searchName.toLowerCase());
-      const regNoMatch = searchRegNo === '' || 
-        student.reg_no.toLowerCase().includes(searchRegNo.toLowerCase());
-      const statusMatch = filterStatus === 'all' || student.status === filterStatus;
-      
-      return nameMatch && regNoMatch && statusMatch;
-    });
-  }, [students, searchName, searchRegNo, filterStatus]);
-
-  const getStatusInfo = (status) => {
-    return statusMap[status] || statusMap.default;
-  };
-
-  const resultCount = filteredStudents.length;
-  const hasFilters = searchName || searchRegNo || filterStatus !== 'all';
-
-  // NEW: Check if balancesData is an empty object or empty array
-  const isEmptyBalanceData = useMemo(() => {
-    if (!balancesData) return true;
-    
-    if (Array.isArray(balancesData)) {
-      return balancesData.length === 0;
-    }
-    
-    if (typeof balancesData === 'object') {
-      return Object.keys(balancesData).length === 0;
-    }
-    
-    return false;
-  }, [balancesData]);
-
-  return (
-    <div className="space-y-6 md:space-y-8">
-      {/* Payment Balance Section - Only show if not empty */}
-      {!isEmptyBalanceData && (
-        <PaymentBalanceSection 
-          darkMode={darkMode}
-          institutionData={institutionData}
-          onSuccess={onSuccess}
-        />
-      )}
-
-      {/* Registration Links Section */}
-      <RegistrationLinksSection 
-        darkMode={darkMode}
-        institutionData={institutionData}
-        settingsData={settingsData}
-        onSuccess={onSuccess}
-      />
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6">
-        <StatCard 
-          title="Expected Total" 
-          value={settingsLoading ? '...' : summaryStats.expected.toLocaleString()} 
-          icon={<Clock />} 
-          darkMode={darkMode} 
-        />
-        <StatCard 
-          title="Total Students Submitted" 
-          value={loading ? '...' : summaryStats.totalSubmitted.toLocaleString()} 
-          icon={<Users />} 
-          darkMode={darkMode} 
-        />
-        <StatCard 
-          title="Processing" 
-          value={loading ? '...' : summaryStats.processing.toLocaleString()} 
-          icon={<Activity />} 
-          darkMode={darkMode} 
-        />
-        <StatCard 
-          title="Ready for Delivery" 
-          value={loading ? '...' : summaryStats.ready.toLocaleString()} 
-          icon={<CheckCircle />} 
-          darkMode={darkMode} 
-        />
-      </div>
-
-      {/* Student Submissions Table */}
-      <div className={`p-4 md:p-6 rounded-2xl shadow-md ${darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'}`}>
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 space-y-4 md:space-y-0">
-          <h3 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-            Student Submissions
-          </h3>
-          <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 w-full md:w-auto gap-4">
-            <div className="relative">
-              <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} size={16} />
-              <input
-                type="text"
-                placeholder="Search by name..."
-                className={`pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent w-full sm:w-48 ${
-                  darkMode 
-                    ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
-                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-                }`}
-                onChange={(e) => debouncedSetSearchName(e.target.value)}
-              />
-            </div>
-            <div className="relative">
-              <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} size={16} />
-              <input
-                type="text"
-                placeholder="Search by reg no..."
-                className={`pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent w-full sm:w-48 ${
-                  darkMode 
-                    ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
-                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-                }`}
-                onChange={(e) => debouncedSetSearchRegNo(e.target.value)}
-              />
-            </div>
-            <div className="relative">
-              <Filter className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} size={16} />
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className={`pl-10 pr-8 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent appearance-none w-full sm:w-40 ${
-                  darkMode 
-                    ? 'bg-gray-700 border-gray-600 text-white' 
-                    : 'bg-white border-gray-300 text-gray-900'
-                }`}
-              >
-                <option value="all">All Status</option>
-                <option value="application_received">Pending</option>
-                <option value="id_processing">Processing</option>
-                <option value="id_ready">Ready</option>
-              </select>
-              <ChevronDown className={`absolute right-3 top-1/2 transform -translate-y-1/2 ${darkMode ? 'text-gray-400' : 'text-gray-500'} pointer-events-none`} size={16} />
-            </div>
-          </div>
-        </div>
-
-        {/* Results summary */}
-        <div className={`mb-4 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-          {hasFilters ? (
-            <span>Showing {resultCount} of {students?.length || 0} students</span>
-          ) : (
-            <span>Total: {students?.length || 0} students</span>
           )}
         </div>
+      </div>
+    );
+  };
 
-        {loading ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-teal-500"></div>
-          </div>
-        ) : error ? (
-          <div className="p-4 bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-300">
-            <div className="flex items-center">
-              <AlertTriangle className="mr-2" size={20} />
-              <p>Error loading students: {error.message}</p>
+  // Dashboard Page Component
+  const DashboardPage = ({ students, loading, error, darkMode, refreshData, settingsData, settingsLoading, institutionData, onSuccess }) => {
+    const [searchName, setSearchName] = useState('');
+    const [searchRegNo, setSearchRegNo] = useState('');
+    const [filterStatus, setFilterStatus] = useState('all');
+    const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+    const { balancesData } = useBalancesData(token);
+
+    const debouncedSetSearchName = useCallback(debounce(setSearchName, 300), []);
+    const debouncedSetSearchRegNo = useCallback(debounce(setSearchRegNo, 300), []);
+
+    // Calculate summary stats
+    const summaryStats = useMemo(() => {
+      if (!students) {
+        return {
+          totalSubmitted: 0,
+          pending: 0,
+          processing: 0,
+          ready: 0,
+          expected: 0
+        };
+      }
+
+      const totalSubmitted = students.length;
+      const pending = students.filter(s => s.status === 'pending').length;
+      const processing = students.filter(s => s.status === 'processing').length;
+      const ready = students.filter(s => s.status === 'ready' || s.status === 'id_ready').length;
+      
+      // Get expected total from settings data
+      const settings = Array.isArray(settingsData) && settingsData.length > 0 ? settingsData[0] : null;
+      const expected = settings?.expected_total || 0;
+
+      return { totalSubmitted, pending, processing, ready, expected };
+    }, [students, settingsData]);
+
+    // Filter students based on search and status
+    const filteredStudents = useMemo(() => {
+      if (!students) return [];
+      
+      return students.filter(student => {
+        const nameMatch = searchName === '' || 
+          `${student.first_name} ${student.last_name}`.toLowerCase().includes(searchName.toLowerCase());
+        const regNoMatch = searchRegNo === '' || 
+          student.reg_no.toLowerCase().includes(searchRegNo.toLowerCase());
+        const statusMatch = filterStatus === 'all' || student.status === filterStatus;
+        
+        return nameMatch && regNoMatch && statusMatch;
+      });
+    }, [students, searchName, searchRegNo, filterStatus]);
+
+    const getStatusInfo = (status) => {
+      return statusMap[status] || statusMap.default;
+    };
+
+    const resultCount = filteredStudents.length;
+    const hasFilters = searchName || searchRegNo || filterStatus !== 'all';
+
+    // NEW: Check if balancesData is an empty object or empty array
+    const isEmptyBalanceData = useMemo(() => {
+      if (!balancesData) return true;
+      
+      if (Array.isArray(balancesData)) {
+        return balancesData.length === 0;
+      }
+      
+      if (typeof balancesData === 'object') {
+        return Object.keys(balancesData).length === 0;
+      }
+      
+      return false;
+    }, [balancesData]);
+
+    return (
+      <div className="space-y-6 md:space-y-8">
+        {/* Payment Balance Section - Only show if not empty */}
+        {!isEmptyBalanceData && (
+          <PaymentBalanceSection 
+            darkMode={darkMode}
+            institutionData={institutionData}
+            onSuccess={onSuccess}
+          />
+        )}
+
+        {/* Registration Links Section */}
+        <RegistrationLinksSection 
+          darkMode={darkMode}
+          institutionData={institutionData}
+          settingsData={settingsData}
+          onSuccess={onSuccess}
+        />
+
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6">
+          <StatCard 
+            title="Expected Total" 
+            value={settingsLoading ? '...' : summaryStats.expected.toLocaleString()} 
+            icon={<Clock />} 
+            darkMode={darkMode} 
+          />
+          <StatCard 
+            title="Total Students Submitted" 
+            value={loading ? '...' : summaryStats.totalSubmitted.toLocaleString()} 
+            icon={<Users />} 
+            darkMode={darkMode} 
+          />
+          <StatCard 
+            title="Processing" 
+            value={loading ? '...' : summaryStats.processing.toLocaleString()} 
+            icon={<Activity />} 
+            darkMode={darkMode} 
+          />
+          <StatCard 
+            title="Ready for Delivery" 
+            value={loading ? '...' : summaryStats.ready.toLocaleString()} 
+            icon={<CheckCircle />} 
+            darkMode={darkMode} 
+          />
+        </div>
+
+        {/* Student Submissions Table */}
+        <div className={`p-4 md:p-6 rounded-2xl shadow-md ${darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'}`}>
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 space-y-4 md:space-y-0">
+            <h3 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+              Student Submissions
+            </h3>
+            <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 w-full md:w-auto gap-4">
+              <div className="relative">
+                <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} size={16} />
+                <input
+                  type="text"
+                  placeholder="Search by name..."
+                  className={`pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent w-full sm:w-48 ${
+                    darkMode 
+                      ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
+                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+                  }`}
+                  onChange={(e) => debouncedSetSearchName(e.target.value)}
+                />
+              </div>
+              <div className="relative">
+                <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} size={16} />
+                <input
+                  type="text"
+                  placeholder="Search by reg no..."
+                  className={`pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent w-full sm:w-48 ${
+                    darkMode 
+                      ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
+                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+                  }`}
+                  onChange={(e) => debouncedSetSearchRegNo(e.target.value)}
+                />
+              </div>
+              <div className="relative">
+                <Filter className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} size={16} />
+                <select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  className={`pl-10 pr-8 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent appearance-none w-full sm:w-40 ${
+                    darkMode 
+                      ? 'bg-gray-700 border-gray-600 text-white' 
+                      : 'bg-white border-gray-300 text-gray-900'
+                  }`}
+                >
+                  <option value="all">All Status</option>
+                  <option value="application_received">Pending</option>
+                  <option value="id_processing">Processing</option>
+                  <option value="id_ready">Ready</option>
+                </select>
+                <ChevronDown className={`absolute right-3 top-1/2 transform -translate-y-1/2 ${darkMode ? 'text-gray-400' : 'text-gray-500'} pointer-events-none`} size={16} />
+              </div>
             </div>
           </div>
-        ) : filteredStudents.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[600px]">
-              <thead className={`${darkMode ? 'bg-gray-700/50 border-b border-gray-600' : 'bg-gray-50 border-b border-gray-200'}`}>
-                <tr>
-                  <th className={`p-3 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Student Name</th>
-                  <th className={`p-3 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Registration Number</th>
-                  <th className={`p-3 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Submission Date</th>
-                  <th className={`p-3 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Status</th>
-                </tr>
-              </thead>
-              <tbody className={`divide-y ${darkMode ? 'divide-gray-700' : 'divide-gray-200'}`}>
-                {filteredStudents.map(student => (
-                  <tr key={student.id} className={`${darkMode ? 'hover:bg-gray-700/30' : 'hover:bg-gray-50/50'} transition-colors`}>
-                    <td className="p-3 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <img 
-                          src={student.photo || `https://i.pravatar.cc/40?u=${student.id}`} 
-                          alt={`${student.first_name} ${student.last_name}`} 
-                          className="w-8 h-8 rounded-full object-cover mr-3" 
-                        />
-                        <span className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{student.first_name} {student.last_name}</span>
-                      </div>
-                    </td>
-                    <td className={`p-3 text-sm whitespace-nowrap ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{student.reg_no}</td>
-                    <td className={`p-3 text-sm whitespace-nowrap ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                      {student.created_at ? new Date(student.created_at).toLocaleDateString() : 'N/A'}
-                    </td>
-                    <td className="p-3 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusInfo(student.status).colorClass}`}>
-                        {getStatusInfo(student.status).icon}
-                        <span className="ml-1">{getStatusInfo(student.status).label}</span>
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="text-center py-8">
-            <Users className={`mx-auto mb-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} size={48} />
-            <p className={`${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-              {hasFilters ? 'No students match your search criteria' : 'No student submissions found'}
-            </p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
 
-// Notifications Page Component
-const NotificationsPage = ({ notificationsData, loading, error, darkMode, institutionData }) => {
+          {/* Results summary */}
+          <div className={`mb-4 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+            {hasFilters ? (
+              <span>Showing {resultCount} of {students?.length || 0} students</span>
+            ) : (
+              <span>Total: {students?.length || 0} students</span>
+            )}
+          </div>
+
+          {loading ? (
+            <div className="flex justify-center items-center h-64">
+              <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-teal-500"></div>
+            </div>
+          ) : error ? (
+            <div className="p-4 bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-300">
+              <div className="flex items-center">
+                <AlertTriangle className="mr-2" size={20} />
+                <p>Error loading students: {error.message}</p>
+              </div>
+            </div>
+          ) : filteredStudents.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[600px]">
+                <thead className={`${darkMode ? 'bg-gray-700/50 border-b border-gray-600' : 'bg-gray-50 border-b border-gray-200'}`}>
+                  <tr>
+                    <th className={`p-3 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Student Name</th>
+                    <th className={`p-3 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Registration Number</th>
+                    <th className={`p-3 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Submission Date</th>
+                    <th className={`p-3 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Status</th>
+                  </tr>
+                </thead>
+                <tbody className={`divide-y ${darkMode ? 'divide-gray-700' : 'divide-gray-200'}`}>
+                  {filteredStudents.map(student => (
+                    <tr key={student.id} className={`${darkMode ? 'hover:bg-gray-700/30' : 'hover:bg-gray-50/50'} transition-colors`}>
+                      <td className="p-3 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <img 
+                            src={student.photo || `https://i.pravatar.cc/40?u=${student.id}`} 
+                            alt={`${student.first_name} ${student.last_name}`} 
+                            className="w-8 h-8 rounded-full object-cover mr-3" 
+                          />
+                          <span className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{student.first_name} {student.last_name}</span>
+                        </div>
+                      </td>
+                      <td className={`p-3 text-sm whitespace-nowrap ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{student.reg_no}</td>
+                      <td className={`p-3 text-sm whitespace-nowrap ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                        {student.created_at ? new Date(student.created_at).toLocaleDateString() : 'N/A'}
+                      </td>
+                      <td className="p-3 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusInfo(student.status).colorClass}`}>
+                          {getStatusInfo(student.status).icon}
+                          <span className="ml-1">{getStatusInfo(student.status).label}</span>
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <Users className={`mx-auto mb-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} size={48} />
+              <p className={`${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                {hasFilters ? 'No students match your search criteria' : 'No student submissions found'}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  /// Notifications Page Component - FIXED
+const NotificationsPage = ({ notificationsData, loading, error, darkMode, institutionData, onMarkAsRead }) => {
   const [showReportForm, setShowReportForm] = useState(false);
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
 
@@ -3338,6 +3354,13 @@ const NotificationsPage = ({ notificationsData, loading, error, darkMode, instit
         return darkMode ? 'border-gray-500 bg-gray-900/20' : 'border-gray-500 bg-gray-50';
     }
   };
+
+  // Mark all notifications as read when the page is opened - FIXED
+  useEffect(() => {
+    if (notificationsData && notificationsData.length > 0 && onMarkAsRead) {
+      onMarkAsRead();
+    }
+  }, [notificationsData]); // Removed onMarkAsRead from dependencies
 
   if (loading) {
     return (
@@ -3379,18 +3402,7 @@ const NotificationsPage = ({ notificationsData, loading, error, darkMode, instit
       />
 
       <div className={`p-6 rounded-2xl shadow-md ${darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'}`}>
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 space-y-4 sm:space-y-0">
-          <h3 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-            Notifications
-          </h3>
-          <button
-            onClick={() => setShowReportForm(true)}
-            className="bg-teal-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-teal-700 transition-colors flex items-center"
-          >
-            <Flag size={16} className="mr-2" />
-            Report Issue
-          </button>
-        </div>
+
         
         {notifications.length > 0 ? (
           <div className="space-y-4 flex flex-col-reverse">
@@ -3429,7 +3441,7 @@ const NotificationsPage = ({ notificationsData, loading, error, darkMode, instit
   );
 };
 
-// Main Dashboard Component
+// Main Dashboard Component - FIXED
 const InstitutionDashboard = () => {
   const [isClient, setIsClient] = useState(false);
   const [activePage, setActivePage] = useState('dashboard');
@@ -3439,6 +3451,7 @@ const InstitutionDashboard = () => {
   const [showInstitutionPopup, setShowInstitutionPopup] = useState(false);
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [readNotifications, setReadNotifications] = useState(new Set());
 
   // Initialize client-side state
   useEffect(() => {
@@ -3468,6 +3481,12 @@ const InstitutionDashboard = () => {
     if (savedSidebarState) {
       setSidebarOpen(JSON.parse(savedSidebarState));
     }
+
+    // Load read notifications from localStorage
+    const savedReadNotifications = localStorage.getItem('readNotifications');
+    if (savedReadNotifications) {
+      setReadNotifications(new Set(JSON.parse(savedReadNotifications)));
+    }
   }, []);
 
   // Save preferences to localStorage
@@ -3482,6 +3501,13 @@ const InstitutionDashboard = () => {
       localStorage.setItem('sidebarOpen', JSON.stringify(sidebarOpen));
     }
   }, [sidebarOpen, isClient]);
+
+  // Save read notifications to localStorage
+  useEffect(() => {
+    if (isClient && readNotifications.size > 0) {
+      localStorage.setItem('readNotifications', JSON.stringify([...readNotifications]));
+    }
+  }, [readNotifications, isClient]);
 
   // Listen for system theme changes
   useEffect(() => {
@@ -3511,7 +3537,35 @@ const InstitutionDashboard = () => {
   const { institutionData, institutionError, institutionLoading, mutateInstitution } = useInstitutionData(token);
   const { students, error: studentsError, isLoading: studentsLoading, mutate: refreshStudents } = useStudentsData(token);
   const { settingsData, settingsError, settingsLoading, mutateSettings } = useSettingsData(token);
-  const { notificationsData, notificationsError, notificationsLoading } = useNotificationsData(token);
+  const { notificationsData, notificationsError, notificationsLoading, mutateNotifications } = useNotificationsData(token);
+
+  // Calculate unread notifications count
+  const unreadCount = useMemo(() => {
+    if (!notificationsData || !Array.isArray(notificationsData)) return 0;
+    
+    return notificationsData.filter(notification => 
+      !readNotifications.has(notification.id)
+    ).length;
+  }, [notificationsData, readNotifications]);
+
+  // Mark all notifications as read - FIXED with useCallback
+  const markAllNotificationsAsRead = useCallback(() => {
+    if (!notificationsData || !Array.isArray(notificationsData)) return;
+    
+    const newReadNotifications = new Set(readNotifications);
+    let hasNewRead = false;
+    
+    notificationsData.forEach(notification => {
+      if (notification.id && !newReadNotifications.has(notification.id)) {
+        newReadNotifications.add(notification.id);
+        hasNewRead = true;
+      }
+    });
+    
+    if (hasNewRead) {
+      setReadNotifications(newReadNotifications);
+    }
+  }, [notificationsData, readNotifications]); // Proper dependencies
 
   const toggleDarkMode = () => {
     const newDarkMode = !darkMode;
@@ -3566,7 +3620,8 @@ const InstitutionDashboard = () => {
           loading={notificationsLoading} 
           institutionData={institutionData}
           error={notificationsError} 
-          darkMode={darkMode} 
+          darkMode={darkMode}
+          onMarkAsRead={markAllNotificationsAsRead}
         />;
       default:
         return <DashboardPage 
@@ -3583,7 +3638,7 @@ const InstitutionDashboard = () => {
     }
   };
 
-  const NavItem = ({ icon, label, pageName, isMobile = false, onClick }) => (
+  const NavItem = ({ icon, label, pageName, isMobile = false, onClick, badgeCount = 0 }) => (
     <button 
       onClick={() => { 
         if (onClick) {
@@ -3593,7 +3648,7 @@ const InstitutionDashboard = () => {
           if(isMobile) toggleMobileMenu(); 
         }
       }}
-      className={`w-full flex items-center p-3 rounded-lg transition-colors 
+      className={`w-full flex items-center p-3 rounded-lg transition-colors relative
         ${activePage === pageName 
           ? `bg-teal-600 text-white` 
           : `${darkMode ? 'text-gray-400 hover:bg-gray-700 hover:text-gray-200' : 'text-gray-600 hover:bg-gray-200'}`}
@@ -3601,7 +3656,14 @@ const InstitutionDashboard = () => {
       `}
       title={label}
     >
-      {icon}
+      <div className="relative">
+        {icon}
+        {badgeCount > 0 && (
+          <span className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full text-xs w-5 h-5 flex items-center justify-center font-medium">
+            {badgeCount > 9 ? '9+' : badgeCount}
+          </span>
+        )}
+      </div>
       {(sidebarOpen || isMobile) && <span className="ml-3 truncate">{label}</span>}
     </button>
   );
@@ -3678,7 +3740,12 @@ const InstitutionDashboard = () => {
               <NavItem icon={<LayoutDashboard size={20}/>} label="Dashboard" pageName="dashboard" />
               <NavItem icon={<Settings size={20}/>} label="Template Settings" pageName="template-settings" />
               <NavItem icon={<CreditCard size={20}/>} label="Payments" pageName="payments" />
-              <NavItem icon={<Bell size={20}/>} label="Notifications" pageName="notifications" />
+              <NavItem 
+                icon={<Bell size={20}/>} 
+                label="Notifications" 
+                pageName="notifications" 
+                badgeCount={unreadCount}
+              />
             </nav>
             <div className={`p-4 border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
               <button 
@@ -3722,7 +3789,12 @@ const InstitutionDashboard = () => {
               <NavItem icon={<LayoutDashboard size={20}/>} label="Dashboard" pageName="dashboard" />
               <NavItem icon={<Settings size={20}/>} label="Template Settings" pageName="template-settings" />
               <NavItem icon={<CreditCard size={20}/>} label="Payments" pageName="payments" />
-              <NavItem icon={<Bell size={20}/>} label="Notifications" pageName="notifications" />
+              <NavItem 
+                icon={<Bell size={20}/>} 
+                label="Notifications" 
+                pageName="notifications" 
+                badgeCount={unreadCount}
+              />
             </nav>
             <div className={`p-4 border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'} space-y-2`}>
               <button 
@@ -3769,7 +3841,13 @@ const InstitutionDashboard = () => {
                 <NavItem icon={<LayoutDashboard size={20}/>} label="Dashboard" pageName="dashboard" isMobile={true} />
                 <NavItem icon={<Settings size={20}/>} label="Template Settings" pageName="template-settings" isMobile={true} />
                 <NavItem icon={<CreditCard size={20}/>} label="Payments" pageName="payments" isMobile={true} />
-                <NavItem icon={<Bell size={20}/>} label="Notifications" pageName="notifications" isMobile={true} />
+                <NavItem 
+                  icon={<Bell size={20}/>} 
+                  label="Notifications" 
+                  pageName="notifications" 
+                  isMobile={true}
+                  badgeCount={unreadCount}
+                />
               </nav>
               <div className={`p-4 border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
                 <button 
@@ -3820,6 +3898,11 @@ const InstitutionDashboard = () => {
             </div>
             
             <div className="flex items-center space-x-4">
+              <NotificationBell 
+                darkMode={darkMode}
+                unreadCount={unreadCount}
+                onClick={() => setActivePage('notifications')}
+              />
               <button 
                 onClick={() => setShowInstitutionPopup(true)}
                 className={`flex items-center space-x-3 p-2 rounded-lg transition-colors ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
