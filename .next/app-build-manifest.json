@@ -16,21 +16,6 @@
       "static/chunks/main-app.js",
       "static/chunks/app/page.js"
     ],
-    "/_not-found/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/_not-found/page.js"
-    ],
-    "/about/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/about/page.js"
-    ],
-    "/institution/auth/login/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/institution/auth/login/page.js"
-    ],
     "/institution/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
@@ -41,11 +26,20 @@
       "static/chunks/main-app.js",
       "static/chunks/app/institution/(auth)/login/page.js"
     ],
-    "/tutorials/page": [
+    "/institution/auth/login/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/css/app/tutorials/page.css",
-      "static/chunks/app/tutorials/page.js"
+      "static/chunks/app/institution/auth/login/page.js"
+    ],
+    "/about/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/about/page.js"
+    ],
+    "/_not-found/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/_not-found/page.js"
     ]
   }
 }

@@ -3,6 +3,6 @@
   "/institution/page": "app/institution/page.js",
   "/institution/(auth)/login/page": "app/institution/(auth)/login/page.js",
   "/institution/auth/login/page": "app/institution/auth/login/page.js",
-  "/tutorials/page": "app/tutorials/page.js",
+  "/about/page": "app/about/page.js",
   "/favicon.ico/route": "app/favicon.ico/route.js"
 }
