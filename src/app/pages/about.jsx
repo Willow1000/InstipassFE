@@ -1,5 +1,5 @@
 "use client"
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, ChevronDown, ChevronUp, Users, Eye, Mail, MessageSquare, Check, Shield, Clock, Zap, Award, Star, BarChart, Building, Phone, Calendar, AlertCircle } from 'lucide-react';
 import Navbar from '../components/aboutNavbar';
@@ -7,6 +7,7 @@ import Footer from '../components/aboutFooter';
 import dynamic from 'next/dynamic';
 import ParallaxHero from '../components/ParallaxHero';
 // import TestimonialCarousel from '../components/TestimonialCarousel1';
+const NewsletterSignup = lazy(() => import('../components/NewsletterSignup'));
 
 // Dynamically import BookDemoModal with ssr: false to prevent hydration issues
 const BookDemoModal = dynamic(() => import('../components/BookDemoModal'), { 
@@ -19,6 +20,47 @@ const BookDemoModal = dynamic(() => import('../components/BookDemoModal'), {
     </div>
   )
 });
+// / Skeleton loaders
+const SkeletonLoader = ({ type, darkMode }) => {
+  const bgColor = darkMode ? 'bg-gray-700' : 'bg-gray-200';
+  
+  if (type === 'text') {
+    return (
+      <div className="animate-pulse space-y-2">
+        <div className={`h-4 ${bgColor} rounded w-3/4`}></div>
+        <div className={`h-4 ${bgColor} rounded`}></div>
+        <div className={`h-4 ${bgColor} rounded w-5/6`}></div>
+      </div>
+    );
+  }
+  
+  if (type === 'card') {
+    return (
+      <div className="animate-pulse">
+        <div className={`h-48 ${bgColor} rounded-lg mb-4`}></div>
+        <div className={`h-4 ${bgColor} rounded w-3/4 mb-2`}></div>
+        <div className={`h-4 ${bgColor} rounded mb-2`}></div>
+        <div className={`h-4 ${bgColor} rounded w-5/6`}></div>
+      </div>
+    );
+  }
+  
+  if (type === 'dashboard') {
+    return (
+      <div className="animate-pulse">
+        <div className={`h-64 ${bgColor} rounded-lg mb-4`}></div>
+        <div className="grid grid-cols-3 gap-4 mb-4">
+          <div className={`h-24 ${bgColor} rounded`}></div>
+          <div className={`h-24 ${bgColor} rounded`}></div>
+          <div className={`h-24 ${bgColor} rounded`}></div>
+        </div>
+        <div className={`h-32 ${bgColor} rounded mb-4`}></div>
+      </div>
+    );
+  }
+  
+  return null;
+};
 
 const AboutPage = () => {
   const [darkMode, setDarkMode] = useState(false);
@@ -1105,6 +1147,42 @@ const AboutPage = () => {
             </div>
           </div>
         </section>
+        {/* Newsletter Section - ENHANCED */}
+        <Suspense fallback={
+          <div className={`py-16 ${darkMode ? 'bg-gray-800' : 'bg-gray-50'} overflow-x-hidden`}>
+            <div className="container mx-auto px-6">
+              <div className="text-center mb-8">
+                <h2 className="text-3xl font-bold mb-4">Stay Updated</h2>
+                <SkeletonLoader type="text" darkMode={darkMode} />
+              </div>
+              <div className="max-w-md mx-auto">
+                <div className={`h-12 ${darkMode ? 'bg-gray-700' : 'bg-gray-200'} rounded mb-4 animate-pulse`}></div>
+                <div className={`h-12 ${darkMode ? 'bg-gray-700' : 'bg-gray-200'} rounded animate-pulse`}></div>
+              </div>
+            </div>
+          </div>
+        }>
+          <section className={`py-20 ${darkMode ? 'bg-gray-800' : 'bg-gray-50'} overflow-x-hidden`}>
+            <div className="container mx-auto px-6">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5 }}
+                className="text-center mb-12"
+              >
+                <span className="inline-block px-4 py-2 rounded-full bg-[#2A9D8F] bg-opacity-10 text-[#2A9D8F] font-medium mb-4">
+                  Stay Connected
+                </span>
+                <h2 className="text-3xl font-bold mb-4">Get Industry Updates</h2>
+                <p className={`max-w-2xl mx-auto text-lg ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                  Subscribe to our newsletter for the latest news, updates, and insights on digital ID management.
+                </p>
+              </motion.div>
+              <NewsletterSignup darkMode={darkMode} />
+            </div>
+          </section>
+        </Suspense>
       </main>
       
       {/* Footer Component */}

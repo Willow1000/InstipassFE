@@ -24,9 +24,47 @@ import {
   Star,
   Award
 } from 'lucide-react';
+import dynamic from 'next/dynamic';
+import Link from 'next/link';
+// Dynamically import BookDemoModal with ssr: false to prevent hydration issues
+const BookDemoModal = dynamic(() => import('../../components/BookDemoModal'), { 
+  ssr: false,
+  loading: () => (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+      <div className="relative w-full max-w-md p-6 rounded-lg shadow-xl bg-white animate-pulse">
+        <div className="h-64 w-full"></div>
+      </div>
+    </div>
+  )
+});
 
 // Skeleton loaders
-
+const SkeletonLoader = ({ type, darkMode }) => {
+  const bgColor = darkMode ? 'bg-gray-700' : 'bg-gray-200';
+  
+  if (type === 'text') {
+    return (
+      <div className="animate-pulse space-y-2">
+        <div className={`h-4 ${bgColor} rounded w-3/4`}></div>
+        <div className={`h-4 ${bgColor} rounded`}></div>
+        <div className={`h-4 ${bgColor} rounded w-5/6`}></div>
+      </div>
+    );
+  }
+  
+  if (type === 'card') {
+    return (
+      <div className="animate-pulse">
+        <div className={`h-48 ${bgColor} rounded-lg mb-4`}></div>
+        <div className={`h-4 ${bgColor} rounded w-3/4 mb-2`}></div>
+        <div className={`h-4 ${bgColor} rounded mb-2`}></div>
+        <div className={`h-4 ${bgColor} rounded w-5/6`}></div>
+      </div>
+    );
+  }
+  
+  return null;
+};
 
 const InstitutionTutorialPage = () => {
   const [darkMode, setDarkMode] = useState(false);
@@ -83,6 +121,7 @@ const InstitutionTutorialPage = () => {
         "Address compliance considerations"
       ]
     },
+    // ... rest of your steps array remains the same
     {
       id: 2,
       icon: <Mail size={48} className="text-[#1D3557] dark:text-[#2A9D8F]" />,
@@ -192,7 +231,7 @@ const InstitutionTutorialPage = () => {
       </header>
 
       {/* Fixed Book Demo Button */}
-      {/* <div className="fixed right-6 top-24 z-40">
+      <div className="fixed right-6 top-24 z-40">
         <motion.button
           onClick={() => setIsBookDemoOpen(true)}
           className={`flex items-center px-5 py-3 font-medium rounded-lg shadow-lg bg-transparent ${darkMode ? 'text-white' : 'text-black'} hover:bg-[#2A9D8F] hover:text-white`}
@@ -205,7 +244,7 @@ const InstitutionTutorialPage = () => {
           <Calendar className="mr-2" size={18} />
           Book Demo Session
         </motion.button>
-      </div> */}
+      </div>
 
       <main className="flex-grow overflow-x-hidden">
         {/* Hero Section */}
@@ -226,7 +265,30 @@ const InstitutionTutorialPage = () => {
               <p className={`text-xl md:text-2xl mb-8 max-w-3xl mx-auto ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                 Comprehensive step-by-step guide for institutions to set up and manage their Instipass digital ID system
               </p>
- 
+              <motion.div 
+                className="flex flex-col sm:flex-row justify-center gap-4"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.6 }}
+              >
+                <motion.button
+                  onClick={() => setIsBookDemoOpen(true)}
+                  className="px-8 py-4 bg-gradient-to-r from-[#1D3557] to-[#2A9D8F] text-white text-lg font-medium rounded-lg shadow-xl cursor-pointer z-10"
+                  whileHover={{ scale: 1.05, boxShadow: "0 15px 30px rgba(0, 0, 0, 0.2)" }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Calendar className="inline-block mr-2" size={20} />
+                  Book a Demo
+                </motion.button>
+                <motion.button
+                  onClick={() => scrollToSection(featuresRef)}
+                  className="px-8 py-4 bg-white bg-opacity-20 backdrop-blur-sm text-[#1D3557] dark:text-white text-lg font-medium rounded-lg border border-[#1D3557] dark:border-white border-opacity-30 shadow-lg z-10" 
+                  whileHover={{ scale: 1.05, backgroundColor: darkMode ? "rgba(255,255,255,0.3)" : "rgba(29, 53, 87, 0.1)" }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  Explore Tutorial <ChevronRight className="inline ml-1" size={20} />
+                </motion.button>
+              </motion.div>
             </motion.div>
           </div>
         </section>
@@ -418,14 +480,15 @@ const InstitutionTutorialPage = () => {
                     <Calendar className="inline-block mr-2" size={20} />
                     Book a Demo
                   </motion.button>
-                  <motion.button
-                    className={`px-8 py-4 ${darkMode ? 'bg-gray-700 text-white' : 'bg-white text-gray-800'} text-lg font-medium rounded-lg border border-gray-300 dark:border-gray-600 shadow-lg`}
-                    whileHover={{ scale: 1.05, boxShadow: "0 10px 25px rgba(0, 0, 0, 0.1)" }}
-                    whileTap={{ scale: 0.95 }}
+                       <Link
+                    className={`px-8 py-4 ${darkMode ? 'bg-gray-600 text-white' : 'bg-white text-gray-800'} text-lg font-medium rounded-lg border border-gray-300 dark:border-gray-500 shadow-lg`}
+                    // whileHover={{ scale: 1.05, boxShadow: "0 10px 25px rgba(0, 0, 0, 0.1)" }}
+                    // whileTap={{ scale: 0.95 }}
+                    href="/about#contact"
                   >
                     <Mail className="inline-block mr-2" size={20} />
                     Contact Support
-                  </motion.button>
+                  </Link>
                 </div>
               </div>
             </motion.div>
@@ -447,9 +510,18 @@ const InstitutionTutorialPage = () => {
           </div>
         </div>
       </footer>
+
+      {/* Book Demo Modal */}
+      <AnimatePresence>
+        {isBookDemoOpen && (
+          <BookDemoModal 
+            darkMode={darkMode} 
+            onClose={() => setIsBookDemoOpen(false)} 
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };
 
 export default InstitutionTutorialPage;
-

@@ -5,6 +5,12 @@
       "static/chunks/_app-pages-browser_src_app_components_BookDemoModal_jsx-_e9070.js"
     ]
   },
+  "app/pages/about.jsx -> ../components/NewsletterSignup": {
+    "id": "app/pages/about.jsx -> ../components/NewsletterSignup",
+    "files": [
+      "static/chunks/_app-pages-browser_src_app_components_NewsletterSignup_jsx.js"
+    ]
+  },
   "app/pages/home.jsx -> ../components/AnimatedIDs": {
     "id": "app/pages/home.jsx -> ../components/AnimatedIDs",
     "files": [
@@ -29,12 +35,6 @@
       "static/chunks/_app-pages-browser_src_app_components_FAQSection_jsx.js"
     ]
   },
-  "app/pages/home.jsx -> ../components/NewsletterSignup": {
-    "id": "app/pages/home.jsx -> ../components/NewsletterSignup",
-    "files": [
-      "static/chunks/_app-pages-browser_src_app_components_NewsletterSignup_jsx.js"
-    ]
-  },
   "app/pages/home.jsx -> ../components/TestimonialCarousel": {
     "id": "app/pages/home.jsx -> ../components/TestimonialCarousel",
     "files": [
@@ -45,6 +45,18 @@
     "id": "app/pages/home.jsx -> ./institutions/institutiondashboard",
     "files": [
       "static/chunks/_app-pages-browser_src_app_pages_institutions_institutiondashboard_jsx.js"
+    ]
+  },
+  "app/pages/tutorials/tutorialsinstitutions.jsx -> ../../components/BookDemoModal": {
+    "id": "app/pages/tutorials/tutorialsinstitutions.jsx -> ../../components/BookDemoModal",
+    "files": [
+      "static/chunks/_app-pages-browser_src_app_components_BookDemoModal_jsx-_e9072.js"
+    ]
+  },
+  "app/pages/tutorials/tutorialsstudents.jsx -> ../../components/BookDemoModal": {
+    "id": "app/pages/tutorials/tutorialsstudents.jsx -> ../../components/BookDemoModal",
+    "files": [
+      "static/chunks/_app-pages-browser_src_app_components_BookDemoModal_jsx-_e9072.js"
     ]
   }
 }

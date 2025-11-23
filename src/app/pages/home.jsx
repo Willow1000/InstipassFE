@@ -17,6 +17,9 @@ import dynamic from 'next/dynamic';
 import AnimatedHowItWorks from '../components/HowItWorks'
 // import metadata from '../utils/title'
 
+// Import the Chatbot Interface component
+import ChatbotInterface from '../components/ChatbotInterface'; // Assuming the component is in components/ChatbotInterface.jsx
+
 // 
 // Dynamically import BookDemoModal with ssr: false to prevent hydration issues
 const BookDemoModal = dynamic(() => import('../components/BookDemoModal'), { 
@@ -34,7 +37,7 @@ const BookDemoModal = dynamic(() => import('../components/BookDemoModal'), {
 const FAQSection = lazy(() => import('../components/FAQSection'));
 const TestimonialCarousel = lazy(() => import('../components/TestimonialCarousel'));
 const ClientLogos = lazy(() => import('../components/ClientLogos'));
-const NewsletterSignup = lazy(() => import('../components/NewsletterSignup'));
+
 const AnimatedIDs = lazy(() => import('../components/AnimatedIDs'));
 const AdminDashboardPreview = lazy(() => import('./institutions/institutiondashboard'));
 
@@ -367,134 +370,48 @@ const HomePage = () => {
               className="text-center mb-16"
             >
               <span className="inline-block px-4 py-2 rounded-full bg-[#2A9D8F] bg-opacity-10 text-[#2A9D8F] font-medium mb-4">
-                Why Choose InstiPass
+                Core Features
               </span>
-              <h2 className="text-4xl font-bold mb-6">Institution Benefits</h2>
+              <h2 className="text-4xl font-bold mb-6">Benefits for Your Institution</h2>
               <p className={`max-w-2xl mx-auto text-lg ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                InstiPass delivers significant advantages for educational institutions of all sizes.
+                InstiPass offers a suite of features designed to simplify ID management and enhance campus life.
               </p>
             </motion.div>
             
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-              {[
-    {
-      icon: <Smartphone size={48} className={`${darkMode?"text-[#2A9D8F]":"text-[#1D3557]"}`} />,
-      title: "Mobile-First Registration",
-      description: "Students can easily register for IDs right from their phones—no queues, no paperwork."
-    },
-    {
-      icon: <BarChart2 size={48} className={`${darkMode?"text-[#2A9D8F]":"text-[#1D3557]"}`} />,
-      title: "Real-Time Tracking",
-      description: "Both students and institutions can monitor the status of ID applications from submission to completion."
-    },
-    {
-      icon: <LayoutDashboard size={48} className={`${darkMode?"text-[#2A9D8F]":"text-[#1D3557]"}`} />,
-      title: "Institution Dashboard",
-      description: "Institutions get a centralized dashboard to view student progress and design their own ID templates."
-    },
-
-    {
-      icon: <Headphones size={48} className={`${darkMode?"text-[#2A9D8F]":"text-[#1D3557]"}`}/>,
-      title: "Always-On Support",
-      description: "Our support team is available to assist students and institutions whenever help is needed."
-    }
-].map((benefit, index) => (
-                <motion.div 
-                  key={index}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.5, delay: index * 0.1 }}
-                  whileHover={{ 
-                    y: -10,
-                    boxShadow: darkMode 
-                      ? "0 15px 35px rgba(0, 0, 0, 0.3)" 
-                      : "0 15px 35px rgba(0, 0, 0, 0.1)"
-                  }}
-                  className={`p-8 rounded-xl text-center transition-all duration-300 ${
-                    darkMode ? 'bg-gray-700 hover:bg-gray-650' : 'bg-white hover:bg-gray-50'
-                  } border border-transparent hover:border-[#2A9D8F] hover:border-opacity-30`}
-                >
-                  <div className="mb-6 flex justify-center">
-                    <div className={`p-4 rounded-full ${darkMode ? 'bg-gray-800' : 'bg-[#1D3557] bg-opacity-10'}`}>
-                      {benefit.icon}
-                    </div>
-                  </div>
-                  <h3 className="text-xl font-bold mb-4">{benefit.title}</h3>
-                  <p className={`${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{benefit.description}</p>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </section>
-        
-        
-        
-        {/* Features Section - ENHANCED */}
-        <section ref={featuresRef} id="features" className={`py-20 ${darkMode ? 'bg-gray-800' : 'bg-gray-50'} overflow-x-hidden`}>
-          <div className="container mx-auto px-6">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5 }}
-              className="text-center mb-16"
-            >
-              <span className="inline-block px-4 py-2 rounded-full bg-[#2A9D8F] bg-opacity-10 text-[#2A9D8F] font-medium mb-4">
-                Powerful Tools
-              </span>
-              <h2 className="text-4xl font-bold mb-6">Administrative Features</h2>
-              <p className={`max-w-2xl mx-auto text-lg ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                Discover how InstiPass empowers your institution with these powerful administrative tools.
-              </p>
-            </motion.div>
-            
-            <div className="grid md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
               {[
                 {
-                  icon: <BarChart size={48} className={`${darkMode?"text-[#2A9D8F]":"text-[#1D3557]"}`} />,
-                  title: "Comprehensive Analytics",
-                  description: "Access detailed reports and analytics on ID issuance, usage patterns, and system performance.",
-                  features: ["Usage trends visualization", "Exportable reports", "Custom date ranges"]
+                  icon: <Smartphone size={36} className="text-[#2A9D8F]" />,
+                  title: "Mobile-First Digital IDs",
+                  description: "Issue secure, verifiable digital student IDs directly to student smartphones. Reduce physical card costs and administrative overhead.",
+                  features: ["Instant Issuance", "Offline Access", "Secure QR Codes"]
                 },
                 {
-                  icon: <FileText size={48} className={`${darkMode?"text-[#2A9D8F]":"text-[#1D3557]"}`} />,
-                  title: "Custom ID Templates",
-                  description: "Design unique ID templates that match your institution's branding and requirements.",
-                  features: ["Drag-and-drop editor", "Logo & color customization", "Dynamic field placement"]
-                }
-                ,
+                  icon: <LayoutDashboard size={36} className="text-[#2A9D8F]" />,
+                  title: "Centralized Admin Dashboard",
+                  description: "Manage all student IDs, track usage, and generate reports from a single, intuitive dashboard. Full control at your fingertips.",
+                  features: ["Real-time Analytics", "Bulk Management", "Audit Logs"]
+                },
                 {
-                  icon: <Bell size={48} className={`${darkMode?"text-[#2A9D8F]":"text-[#1D3557]"}`} />,
-                  title: "Automated Notifications",
-                  description: "Set up custom notification workflows to keep administrators informed of important events and status changes.",
-                  features: ["Email & SMS alerts", "Custom triggers", "Scheduled notifications"]
+                  icon: <Shield size={36} className="text-[#2A9D8F]" />,
+                  title: "Enhanced Security & Compliance",
+                  description: "Leverage modern encryption and verification protocols to ensure the highest level of security and meet all regulatory requirements.",
+                  features: ["Two-Factor Authentication", "GDPR Compliant", "Tamper-Proof Design"]
                 }
               ].map((feature, index) => (
-                <motion.div 
+                <motion.div
                   key={index}
-                  initial={{ opacity: 0, y: 20 }}
+                  className={`p-8 rounded-xl shadow-lg ${darkMode ? 'bg-gray-900' : 'bg-white'} border border-gray-200 dark:border-gray-700`}
+                  initial={{ opacity: 0, y: 50 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.5, delay: index * 0.1 }}
-                  whileHover={{ 
-                    y: -10,
-                    boxShadow: darkMode 
-                      ? "0 15px 35px rgba(0, 0, 0, 0.3)" 
-                      : "0 15px 35px rgba(0, 0, 0, 0.1)"
-                  }}
-                  className={`p-8 rounded-xl transition-all duration-300 ${
-                    darkMode ? 'bg-gray-700 hover:bg-gray-650' : 'bg-white hover:bg-gray-50'
-                  } border border-transparent hover:border-[#2A9D8F] hover:border-opacity-30`}
+                  whileHover={{ y: -5, boxShadow: "0 20px 40px rgba(0, 0, 0, 0.1)" }}
                 >
-                  <div className="mb-6 flex justify-center">
-                    <div className={`p-4 rounded-full ${darkMode ? 'bg-gray-800' : 'bg-[#1D3557] bg-opacity-10'}`}>
-                      {feature.icon}
-                    </div>
-                  </div>
-                  <h3 className="text-xl font-bold mb-4 text-center">{feature.title}</h3>
-                  <p className={`mb-6 text-center ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{feature.description}</p>
-                  <ul className={`space-y-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                  <div className="mb-4">{feature.icon}</div>
+                  <h3 className="text-xl font-bold mb-3">{feature.title}</h3>
+                  <p className={`mb-6 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{feature.description}</p>
+                  <ul className="space-y-2">
                     {feature.features.map((item, i) => (
                       <li key={i} className="flex items-center">
                         <CheckCircle className="text-[#2A9D8F] mr-2 flex-shrink-0" size={16} />
@@ -743,7 +660,7 @@ const HomePage = () => {
                     <Calendar className="inline-block mr-2" size={20} />
                     Book a Demo
                   </motion.button>
-                  <Link href="/contact" passHref>
+                  <Link href="/about#contact" passHref>
                     <motion.button
                       className={`px-8 py-4 ${darkMode ? 'bg-gray-700 text-white' : 'bg-white text-gray-800'} text-lg font-medium rounded-lg border border-gray-300 dark:border-gray-600 shadow-lg`}
                       whileHover={{ scale: 1.05, boxShadow: "0 10px 25px rgba(0, 0, 0, 0.1)" }}
@@ -791,7 +708,7 @@ const HomePage = () => {
                   Subscribe to our newsletter for the latest news, updates, and insights on digital ID management.
                 </p>
               </motion.div>
-              <NewsletterSignup darkMode={darkMode} />
+              <ChatbotInterface darkMode={darkMode} />
             </div>
           </section>
         </Suspense>
@@ -809,6 +726,9 @@ const HomePage = () => {
           />
         )}
       </AnimatePresence>
+
+      {/* Chatbot Interface - Integrated Here */}
+  
     </div>
   );
 };
