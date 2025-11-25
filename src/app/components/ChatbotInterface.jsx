@@ -1,8 +1,30 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, MessageSquare, X, Loader2, User, Bot, Move, Mic, MicOff, Square } from 'lucide-react';
+
+// Utility hook to detect if the screen is mobile (less than md breakpoint, 768px)
+const useIsMobile = (breakpoint = 768) => {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkIsMobile = () => {
+      setIsMobile(window.innerWidth < breakpoint);
+    };
+
+    // Set initial state
+    checkIsMobile();
+
+    // Add event listener for window resize
+    window.addEventListener('resize', checkIsMobile);
+
+    // Cleanup
+    return () => window.removeEventListener('resize', checkIsMobile);
+  }, [breakpoint]);
+
+  return isMobile;
+};
 
 // Main Chatbot Component
 const ChatbotInterface = () => {
@@ -18,6 +40,8 @@ const ChatbotInterface = () => {
     },
   ]);
   const [isTyping, setIsTyping] = useState(false);
+  
+  // Desktop-only dragging states
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
@@ -32,9 +56,11 @@ const ChatbotInterface = () => {
   const modalRef = useRef(null);
   const recognitionRef = useRef(null);
 
-  // Initialize speech recognition
+  // Custom hook to determine if we are on a mobile screen
+  const isMobileView = useIsMobile(768); // md breakpoint is 768px
+
+  // Initialize speech recognition (unchanged)
   useEffect(() => {
-    // Check if browser supports speech recognition
     if (typeof window !== 'undefined' && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
       setIsSpeechSupported(true);
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -93,7 +119,7 @@ const ChatbotInterface = () => {
     };
   }, []);
 
-  // Listen for theme changes from the homepage
+  // Listen for theme changes (unchanged)
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedTheme = localStorage.getItem('instipass-theme');
@@ -110,9 +136,9 @@ const ChatbotInterface = () => {
     }
   }, []);
 
-  // Set initial position when opening
+  // Set initial position when opening (Desktop only)
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && !isMobileView) {
       const modalWidth = 384; // max-w-md
       const modalHeight = 500;
       setPosition({
@@ -120,16 +146,16 @@ const ChatbotInterface = () => {
         y: window.innerHeight - modalHeight - 24
       });
     }
-  }, [isOpen]);
+  }, [isOpen, isMobileView]);
 
-  // Scroll to bottom of chat
+  // Scroll to bottom of chat (unchanged)
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   useEffect(scrollToBottom, [messages]);
 
-  // Speech recognition functions
+  // Speech recognition functions (unchanged)
   const startListening = () => {
     if (recognitionRef.current && isSpeechSupported) {
       try {
@@ -159,6 +185,7 @@ const ChatbotInterface = () => {
     }
   };
 
+  // Handle send message (unchanged)
   const handleSend = () => {
     if (input.trim() === '') return;
 
@@ -197,8 +224,10 @@ const ChatbotInterface = () => {
     }
   };
 
-  // Improved drag handlers with better sensitivity
+  // Improved drag handlers with conditional check for mobile view
   const handleMouseDown = (e) => {
+    if (isMobileView) return; // Disable dragging on mobile
+
     // Don't start drag if clicking on interactive elements
     if (e.target.closest('input, button, a')) return;
     
@@ -214,8 +243,8 @@ const ChatbotInterface = () => {
   };
 
   // Use requestAnimationFrame for smoother dragging
-  const handleMouseMove = React.useCallback((e) => {
-    if (!isDragging) return;
+  const handleMouseMove = useCallback((e) => {
+    if (!isDragging || isMobileView) return;
     
     requestAnimationFrame(() => {
       const newX = e.clientX - dragOffset.x;
@@ -226,10 +255,10 @@ const ChatbotInterface = () => {
         y: newY
       });
     });
-  }, [isDragging, dragOffset]);
+  }, [isDragging, dragOffset, isMobileView]);
 
-  const handleMouseUp = React.useCallback(() => {
-    if (!isDragging) return;
+  const handleMouseUp = useCallback(() => {
+    if (!isDragging || isMobileView) return;
     
     setIsDragging(false);
     
@@ -243,11 +272,11 @@ const ChatbotInterface = () => {
       x: Math.max(0, Math.min(prev.x, viewportWidth - modalWidth)),
       y: Math.max(0, Math.min(prev.y, viewportHeight - modalHeight))
     }));
-  }, [isDragging]);
+  }, [isDragging, isMobileView]);
 
-  // Add global mouse event listeners for dragging
+  // Add global mouse event listeners for dragging (conditional on isDragging and not mobile)
   useEffect(() => {
-    if (isDragging) {
+    if (isDragging && !isMobileView) {
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
       document.body.style.userSelect = 'none';
@@ -265,10 +294,10 @@ const ChatbotInterface = () => {
       document.body.style.userSelect = '';
       document.body.style.cursor = '';
     };
-  }, [isDragging, handleMouseMove, handleMouseUp]);
+  }, [isDragging, handleMouseMove, handleMouseUp, isMobileView]);
 
-  // Message Bubble Component - Memoized to prevent unnecessary re-renders
-  const MessageBubble = React.useCallback(({ message, isUser }) => {
+  // Message Bubble Component - Memoized to prevent unnecessary re-renders (unchanged)
+  const MessageBubble = useCallback(({ message, isUser }) => {
     return (
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -276,7 +305,10 @@ const ChatbotInterface = () => {
         transition={{ duration: 0.3 }}
         className={`flex items-start mb-4 ${isUser ? 'justify-end' : 'justify-start'}`}
       >
-        <div className={`flex items-start p-3 rounded-xl shadow-md max-w-[80%] ${
+        <div className={`flex items-start p-3 rounded-xl shadow-md ${
+          // Increased max-width for better text flow on small screens
+          isMobileView ? 'max-w-[90%]' : 'max-w-[80%]'
+        } ${
           isUser 
             ? 'bg-[#2A9D8F] text-white rounded-br-none' 
             : `${darkMode ? 'bg-gray-700 text-white' : 'bg-gray-100 text-gray-900'} rounded-tl-none`
@@ -301,207 +333,144 @@ const ChatbotInterface = () => {
         </div>
       </motion.div>
     );
-  }, [darkMode]);
+  }, [darkMode, isMobileView]);
+
+  // Determine the modal style based on screen size
+  const modalClasses = isMobileView
+    ? "fixed inset-0 w-full h-full rounded-none" // Full screen on mobile
+    : "fixed bottom-6 right-6 max-w-md h-[500px] rounded-xl"; // Floating widget on desktop
+
+  // Determine the modal position style (only for desktop)
+  const modalStyle = isMobileView ? {} : { left: position.x, top: position.y };
 
   return (
     <>
       {/* Floating action button */}
-      <motion.button
-        className={`fixed bottom-6 right-6 w-14 h-14 rounded-full ${darkMode ? 'bg-[#2A9D8F]' : 'bg-[#1D3557]'} text-white shadow-lg flex items-center justify-center z-50`}
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.9 }}
+      {!isOpen && (
+        <motion.button
+        className={`fixed bottom-6 right-6 w-14 h-14 rounded-full ${darkMode ? 'bg-[#2A9D8F]' : 'bg-[#1D3557]'} text-white shadow-lg flex items-center justify-center z-[100]`}
         onClick={toggleChat}
-        aria-label="Open chat with Instipass AI"
+        aria-label="Toggle Chatbot"
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
       >
-        <MessageSquare size={24} />
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key="open"
+            initial={{ rotate: 0, opacity: 1 }}
+            animate={{ rotate: 0, opacity: 1 }}
+            transition={{ duration: 0.2 }}
+          >
+            <MessageSquare className="w-6 h-6" />
+          </motion.div>
+        </AnimatePresence>
       </motion.button>
-      
-      {/* Chat modal */}
+      )}
+
+      {/* Chatbot Modal */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50"
-            style={{ pointerEvents: 'none' }}
+            initial={{ opacity: 0, scale: isMobileView ? 1 : 0.5, y: isMobileView ? 0 : 50 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: isMobileView ? 1 : 0.5, y: isMobileView ? 0 : 50 }}
+            transition={{ duration: 0.3 }}
+            className={`z-[99] ${isMobileView ? 'bg-black/50' : ''} ${isMobileView ? 'fixed inset-0' : ''}`} // Add overlay on mobile
           >
             <motion.div
               ref={modalRef}
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ 
-                scale: 1, 
-                opacity: 1,
-                x: position.x,
-                y: position.y
-              }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className={`absolute w-full max-w-md h-[500px] rounded-xl shadow-xl flex flex-col overflow-hidden ${
-                isDragging ? 'cursor-grabbing shadow-2xl' : 'cursor-grab'
-              } ${darkMode ? 'bg-gray-900 text-white border border-gray-700' : 'bg-white text-gray-900 border border-gray-200'}`}
-              style={{
-                left: 0,
-                top: 0,
-                pointerEvents: 'all'
-              }}
+              className={`flex flex-col shadow-2xl transition-all duration-300 ${modalClasses} ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}`}
+              style={modalStyle}
               onMouseDown={handleMouseDown}
             >
-              {/* Header - Drag handle */}
-              <div 
-                className={`flex items-center justify-between p-4 shadow-md ${
-                  darkMode ? 'bg-[#1D3557] text-white' : 'bg-[#2A9D8F] text-white'
-                } ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
-              >
+              {/* Header */}
+              <div className={`flex items-center justify-between p-4 shadow-md flex-shrink-0 ${darkMode ? 'bg-gray-900' : 'bg-[#1D3557]'} text-white rounded-t-xl ${isMobileView ? 'rounded-t-none' : ''}`}>
                 <div className="flex items-center">
-                  <MessageSquare className="w-6 h-6 mr-2" />
-                  <h3 className="text-lg font-semibold">Instipass AI Chat</h3>
+                  <Bot className="w-6 h-6 mr-2" />
+                  <h3 className="text-lg font-semibold">Instipass AI Chatbot</h3>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <Move className="w-4 h-4 opacity-70" />
-                  <button
-                    className="p-1 rounded-full hover:bg-white/20 transition-colors"
-                    onClick={toggleChat}
-                    aria-label="Close chat"
-                  >
-                    <X size={20} />
+                <div className="flex items-center">
+                  {/* Drag Handle (Desktop only) */}
+                  {!isMobileView && (
+                    <Move className={`w-5 h-5 mr-3 cursor-grab ${isDragging ? 'cursor-grabbing' : ''}`} />
+                  )}
+                  <button onClick={toggleChat} className="p-1 rounded-full hover:bg-white/20 transition-colors" aria-label="Close Chat">
+                    <X className="w-5 h-5" />
                   </button>
                 </div>
               </div>
 
-              {/* Messages Area - Fixed height to prevent layout shifts */}
-              <div 
-                className={`flex-grow overflow-y-auto p-4 ${
-                  darkMode ? 'custom-scrollbar-dark' : 'custom-scrollbar'
-                }`}
-                style={{ height: 'calc(100% - 136px)' }} // Fixed height calculation
-              >
-                <div className="h-full">
-                  {messages.map((msg) => (
-                    <MessageBubble 
-                      key={msg.id} 
-                      message={msg} 
-                      isUser={msg.isUser} 
-                    />
+              {/* Chat Messages Area */}
+              <div className="flex-grow overflow-y-auto p-4 space-y-4 custom-scrollbar" style={{ minHeight: 0 }}>
+                <AnimatePresence initial={false}>
+                  {messages.map((message) => (
+                    <MessageBubble key={message.id} message={message} isUser={message.isUser} />
                   ))}
-                  {isTyping && (
-                    <div className="flex justify-start">
-                      <div className={`flex items-center p-3 rounded-xl shadow-md ${
-                        darkMode ? 'bg-gray-700 text-white' : 'bg-gray-100 text-gray-900'
-                      }`}>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        <span className="text-sm">Instipass AI is typing...</span>
-                      </div>
+                </AnimatePresence>
+                {isTyping && (
+                  <div className="flex justify-start">
+                    <div className={`p-3 rounded-xl shadow-md max-w-[80%] ${darkMode ? 'bg-gray-700 text-white' : 'bg-gray-100 text-gray-900'} rounded-tl-none`}>
+                      <Loader2 className="w-5 h-5 animate-spin" />
                     </div>
-                  )}
-                  <div ref={messagesEndRef} />
-                </div>
+                  </div>
+                )}
+                <div ref={messagesEndRef} />
               </div>
 
-              {/* Speech Recognition Status */}
-              {isListening && (
-                <div className={`px-4 py-2 text-sm ${
-                  darkMode ? 'bg-yellow-900 text-yellow-200' : 'bg-yellow-100 text-yellow-800'
-                }`}>
-                  <div className="flex items-center">
-                    <div className="flex items-center mr-2">
-                      <div className="w-2 h-2 bg-red-500 rounded-full animate-ping mr-1"></div>
-                      <Mic className="w-4 h-4 mr-1" />
-                    </div>
-                    Listening... {interimTranscript && `"${interimTranscript}"`}
-                  </div>
-                </div>
-              )}
-
-              {recognitionError && (
-                <div className={`px-4 py-2 text-sm ${
-                  darkMode ? 'bg-red-900 text-red-200' : 'bg-red-100 text-red-800'
-                }`}>
-                  {recognitionError}
-                </div>
-              )}
-
               {/* Input Area */}
-              <div className={`flex p-4 border-t ${
-                darkMode ? 'border-gray-700' : 'border-gray-200'
-              }`}>
-                <div className="flex flex-col w-full">
-                  {/* Speech input area */}
-                  {isSpeechSupported && (
-                    <div className="flex items-center mb-2 space-x-2">
-                      <motion.button
-                        onClick={toggleListening}
-                        disabled={isTyping}
-                        whileHover={{ scale: isTyping ? 1 : 1.05 }}
-                        whileTap={{ scale: isTyping ? 1 : 0.95 }}
-                        className={`flex items-center justify-center px-3 py-1 rounded-lg text-sm font-medium transition-colors duration-200 ${
-                          isListening
-                            ? 'bg-red-500 text-white hover:bg-red-600'
-                            : darkMode
-                            ? 'bg-gray-700 text-white hover:bg-gray-600'
-                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                        } ${isTyping ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        aria-label={isListening ? "Stop listening" : "Start voice input"}
-                      >
-                        {isListening ? (
-                          <>
-                            <Square className="w-4 h-4 mr-1" />
-                            Stop
-                          </>
-                        ) : (
-                          <>
-                            <Mic className="w-4 h-4 mr-1" />
-                            Speak
-                          </>
-                        )}
-                      </motion.button>
-                      
-                      {!isSpeechSupported && (
-                        <span className="text-xs text-gray-500">
-                          Voice input not supported in your browser
-                        </span>
-                      )}
-                    </div>
-                  )}
-                  
-                  {/* Text input area */}
-                  <div className="flex">
-                    <input
-                      type="text"
-                      value={input}
-                      onChange={(e) => setInput(e.target.value)}
-                      onKeyDown={handleKeyDown}
-                      placeholder={
-                        isSpeechSupported 
-                          ? "Type your message or use voice input..." 
-                          : "Type your message..."
-                      }
-                      disabled={isTyping}
-                      className={`flex-grow p-3 rounded-l-lg border transition-all duration-200 ${
-                        darkMode 
-                          ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400 focus:ring-2 focus:ring-[#2A9D8F]' 
-                          : 'border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-[#2A9D8F]'
-                      } focus:outline-none`}
-                    />
-                    <motion.button
-                      onClick={handleSend}
-                      disabled={isTyping || input.trim() === ''}
-                      whileHover={{ scale: isTyping || input.trim() === '' ? 1 : 1.02 }}
-                      whileTap={{ scale: isTyping || input.trim() === '' ? 1 : 0.98 }}
-                      className={`flex items-center justify-center px-4 py-2 font-medium rounded-r-lg transition-colors duration-200 ${
-                        darkMode 
-                          ? 'bg-[#2A9D8F] text-white hover:bg-[#1D3557]/90' 
-                          : 'bg-[#1D3557] text-white hover:bg-[#2A9D8F]/90'
-                      } ${
-                        isTyping || input.trim() === '' ? 'opacity-50 cursor-not-allowed' : ''
-                      }`}
-                    >
-                      {isTyping ? (
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                      ) : (
-                        <Send className="w-5 h-5" />
-                      )}
-                    </motion.button>
+              <div className={`p-4 border-t flex-shrink-0 ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'}`}>
+                {isListening && (
+                  <div className="text-center mb-2 text-sm font-medium text-green-500">
+                    Listening... {interimTranscript}
                   </div>
+                )}
+                {recognitionError && (
+                  <div className="text-center mb-2 text-sm font-medium text-red-500">
+                    {recognitionError}
+                  </div>
+                )}
+                <div className="flex items-center">
+                  <input
+                    type="text"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Type your message..."
+                    className={`flex-grow p-3 border rounded-l-lg focus:outline-none focus:ring-2 focus:ring-[#2A9D8F] transition-all ${
+                      darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
+                    }`}
+                    disabled={isListening}
+                  />
+                  
+                  {/* Speech Recognition Button */}
+                  {isSpeechSupported && (
+                    <button
+                      onClick={toggleListening}
+                      className={`p-3 transition-colors ${
+                        isListening 
+                          ? 'bg-red-500 hover:bg-red-600 text-white' 
+                          : `${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-600'}`
+                      }`}
+                      aria-label={isListening ? "Stop Listening" : "Start Voice Input"}
+                      disabled={isTyping}
+                    >
+                      {isListening ? <Square className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                    </button>
+                  )}
+
+                  {/* Send Button */}
+                  <button
+                    onClick={handleSend}
+                    className={`p-3 rounded-r-lg transition-colors ${
+                      input.trim() === '' || isTyping || isListening
+                        ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                        : 'bg-[#2A9D8F] hover:bg-[#207D6E] text-white'
+                    }`}
+                    disabled={input.trim() === '' || isTyping || isListening}
+                    aria-label="Send Message"
+                  >
+                    <Send className="w-5 h-5" />
+                  </button>
                 </div>
               </div>
             </motion.div>
