@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, MessageSquare, X, Loader2, User, Bot, Move } from 'lucide-react';
+import { Send, MessageSquare, X, Loader2, User, Bot, Move, Mic, MicOff, Square } from 'lucide-react';
 
 // Main Chatbot Component
 const ChatbotInterface = () => {
@@ -22,8 +22,76 @@ const ChatbotInterface = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   
+  // Speech recognition states
+  const [isListening, setIsListening] = useState(false);
+  const [isSpeechSupported, setIsSpeechSupported] = useState(false);
+  const [interimTranscript, setInterimTranscript] = useState('');
+  const [recognitionError, setRecognitionError] = useState('');
+  
   const messagesEndRef = useRef(null);
   const modalRef = useRef(null);
+  const recognitionRef = useRef(null);
+
+  // Initialize speech recognition
+  useEffect(() => {
+    // Check if browser supports speech recognition
+    if (typeof window !== 'undefined' && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+      setIsSpeechSupported(true);
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognitionRef.current = new SpeechRecognition();
+      
+      const recognition = recognitionRef.current;
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+
+      recognition.onstart = () => {
+        setIsListening(true);
+        setRecognitionError('');
+      };
+
+      recognition.onresult = (event) => {
+        let finalTranscript = '';
+        let interim = '';
+
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            finalTranscript += transcript;
+          } else {
+            interim += transcript;
+          }
+        }
+
+        setInterimTranscript(interim);
+        
+        if (finalTranscript) {
+          setInput(prev => prev + (prev ? ' ' : '') + finalTranscript);
+          setInterimTranscript('');
+        }
+      };
+
+      recognition.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+        setRecognitionError(`Speech recognition error: ${event.error}`);
+        setIsListening(false);
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+        setInterimTranscript('');
+      };
+    } else {
+      setIsSpeechSupported(false);
+      console.warn('Speech recognition not supported in this browser');
+    }
+
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+    };
+  }, []);
 
   // Listen for theme changes from the homepage
   useEffect(() => {
@@ -60,6 +128,36 @@ const ChatbotInterface = () => {
   };
 
   useEffect(scrollToBottom, [messages]);
+
+  // Speech recognition functions
+  const startListening = () => {
+    if (recognitionRef.current && isSpeechSupported) {
+      try {
+        recognitionRef.current.start();
+      } catch (error) {
+        console.error('Error starting speech recognition:', error);
+        setRecognitionError('Failed to start speech recognition');
+      }
+    }
+  };
+
+  const stopListening = () => {
+    if (recognitionRef.current && isSpeechSupported) {
+      try {
+        recognitionRef.current.stop();
+      } catch (error) {
+        console.error('Error stopping speech recognition:', error);
+      }
+    }
+  };
+
+  const toggleListening = () => {
+    if (isListening) {
+      stopListening();
+    } else {
+      startListening();
+    }
+  };
 
   const handleSend = () => {
     if (input.trim() === '') return;
@@ -299,42 +397,112 @@ const ChatbotInterface = () => {
                 </div>
               </div>
 
+              {/* Speech Recognition Status */}
+              {isListening && (
+                <div className={`px-4 py-2 text-sm ${
+                  darkMode ? 'bg-yellow-900 text-yellow-200' : 'bg-yellow-100 text-yellow-800'
+                }`}>
+                  <div className="flex items-center">
+                    <div className="flex items-center mr-2">
+                      <div className="w-2 h-2 bg-red-500 rounded-full animate-ping mr-1"></div>
+                      <Mic className="w-4 h-4 mr-1" />
+                    </div>
+                    Listening... {interimTranscript && `"${interimTranscript}"`}
+                  </div>
+                </div>
+              )}
+
+              {recognitionError && (
+                <div className={`px-4 py-2 text-sm ${
+                  darkMode ? 'bg-red-900 text-red-200' : 'bg-red-100 text-red-800'
+                }`}>
+                  {recognitionError}
+                </div>
+              )}
+
               {/* Input Area */}
               <div className={`flex p-4 border-t ${
                 darkMode ? 'border-gray-700' : 'border-gray-200'
               }`}>
-                <input
-                  type="text"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Ask Instipass AI a question..."
-                  disabled={isTyping}
-                  className={`flex-grow p-3 rounded-l-lg border transition-all duration-200 ${
-                    darkMode 
-                      ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400 focus:ring-2 focus:ring-[#2A9D8F]' 
-                      : 'border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-[#2A9D8F]'
-                  } focus:outline-none`}
-                />
-                <motion.button
-                  onClick={handleSend}
-                  disabled={isTyping || input.trim() === ''}
-                  whileHover={{ scale: isTyping || input.trim() === '' ? 1 : 1.02 }}
-                  whileTap={{ scale: isTyping || input.trim() === '' ? 1 : 0.98 }}
-                  className={`flex items-center justify-center px-4 py-2 font-medium rounded-r-lg transition-colors duration-200 ${
-                    darkMode 
-                      ? 'bg-[#2A9D8F] text-white hover:bg-[#1D3557]/90' 
-                      : 'bg-[#1D3557] text-white hover:bg-[#2A9D8F]/90'
-                  } ${
-                    isTyping || input.trim() === '' ? 'opacity-50 cursor-not-allowed' : ''
-                  }`}
-                >
-                  {isTyping ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <Send className="w-5 h-5" />
+                <div className="flex flex-col w-full">
+                  {/* Speech input area */}
+                  {isSpeechSupported && (
+                    <div className="flex items-center mb-2 space-x-2">
+                      <motion.button
+                        onClick={toggleListening}
+                        disabled={isTyping}
+                        whileHover={{ scale: isTyping ? 1 : 1.05 }}
+                        whileTap={{ scale: isTyping ? 1 : 0.95 }}
+                        className={`flex items-center justify-center px-3 py-1 rounded-lg text-sm font-medium transition-colors duration-200 ${
+                          isListening
+                            ? 'bg-red-500 text-white hover:bg-red-600'
+                            : darkMode
+                            ? 'bg-gray-700 text-white hover:bg-gray-600'
+                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        } ${isTyping ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        aria-label={isListening ? "Stop listening" : "Start voice input"}
+                      >
+                        {isListening ? (
+                          <>
+                            <Square className="w-4 h-4 mr-1" />
+                            Stop
+                          </>
+                        ) : (
+                          <>
+                            <Mic className="w-4 h-4 mr-1" />
+                            Speak
+                          </>
+                        )}
+                      </motion.button>
+                      
+                      {!isSpeechSupported && (
+                        <span className="text-xs text-gray-500">
+                          Voice input not supported in your browser
+                        </span>
+                      )}
+                    </div>
                   )}
-                </motion.button>
+                  
+                  {/* Text input area */}
+                  <div className="flex">
+                    <input
+                      type="text"
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      placeholder={
+                        isSpeechSupported 
+                          ? "Type your message or use voice input..." 
+                          : "Type your message..."
+                      }
+                      disabled={isTyping}
+                      className={`flex-grow p-3 rounded-l-lg border transition-all duration-200 ${
+                        darkMode 
+                          ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400 focus:ring-2 focus:ring-[#2A9D8F]' 
+                          : 'border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-[#2A9D8F]'
+                      } focus:outline-none`}
+                    />
+                    <motion.button
+                      onClick={handleSend}
+                      disabled={isTyping || input.trim() === ''}
+                      whileHover={{ scale: isTyping || input.trim() === '' ? 1 : 1.02 }}
+                      whileTap={{ scale: isTyping || input.trim() === '' ? 1 : 0.98 }}
+                      className={`flex items-center justify-center px-4 py-2 font-medium rounded-r-lg transition-colors duration-200 ${
+                        darkMode 
+                          ? 'bg-[#2A9D8F] text-white hover:bg-[#1D3557]/90' 
+                          : 'bg-[#1D3557] text-white hover:bg-[#2A9D8F]/90'
+                      } ${
+                        isTyping || input.trim() === '' ? 'opacity-50 cursor-not-allowed' : ''
+                      }`}
+                    >
+                      {isTyping ? (
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                      ) : (
+                        <Send className="w-5 h-5" />
+                      )}
+                    </motion.button>
+                  </div>
+                </div>
               </div>
             </motion.div>
           </motion.div>

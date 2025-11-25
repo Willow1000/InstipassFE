@@ -46,17 +46,5 @@
     "files": [
       "static/chunks/_app-pages-browser_src_app_pages_institutions_institutiondashboard_jsx.js"
     ]
-  },
-  "app/pages/tutorials/tutorialsinstitutions.jsx -> ../../components/BookDemoModal": {
-    "id": "app/pages/tutorials/tutorialsinstitutions.jsx -> ../../components/BookDemoModal",
-    "files": [
-      "static/chunks/_app-pages-browser_src_app_components_BookDemoModal_jsx-_e9072.js"
-    ]
-  },
-  "app/pages/tutorials/tutorialsstudents.jsx -> ../../components/BookDemoModal": {
-    "id": "app/pages/tutorials/tutorialsstudents.jsx -> ../../components/BookDemoModal",
-    "files": [
-      "static/chunks/_app-pages-browser_src_app_components_BookDemoModal_jsx-_e9072.js"
-    ]
   }
 }
