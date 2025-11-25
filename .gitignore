@@ -13,6 +13,12 @@
 /.next/
 /out/
 /server/
+/cache/
+# Next.js trace files
+.next/trace
+.next/trace*
+**/*.trace
+
 
 # production
 /build
