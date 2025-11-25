@@ -136,18 +136,14 @@ const ChatbotInterface = () => {
     }
   }, []);
 
-  // Set initial position when opening (Desktop only) - Improved positioning
+  // Set initial position when opening (Desktop only)
   useEffect(() => {
     if (isOpen && !isMobileView) {
       const modalWidth = 384; // max-w-md
       const modalHeight = 500;
-      const viewportWidth = window.innerWidth;
-      const viewportHeight = window.innerHeight;
-      
-      // Center the modal initially with some margin from edges
       setPosition({
-        x: Math.max(20, (viewportWidth - modalWidth) / 2),
-        y: Math.max(20, (viewportHeight - modalHeight) / 2)
+        x: window.innerWidth - modalWidth - 24,
+        y: window.innerHeight - modalHeight - 24
       });
     }
   }, [isOpen, isMobileView]);
@@ -228,12 +224,12 @@ const ChatbotInterface = () => {
     }
   };
 
-  // Improved drag handlers with better sensitivity and bounds checking
+  // Improved drag handlers with conditional check for mobile view
   const handleMouseDown = (e) => {
     if (isMobileView) return; // Disable dragging on mobile
 
     // Don't start drag if clicking on interactive elements
-    if (e.target.closest('input, button, a, .no-drag')) return;
+    if (e.target.closest('input, button, a')) return;
     
     const modalRect = modalRef.current.getBoundingClientRect();
     const offsetX = e.clientX - modalRect.left;
@@ -246,23 +242,13 @@ const ChatbotInterface = () => {
     e.preventDefault();
   };
 
-  // Use requestAnimationFrame for smoother dragging with bounds checking
+  // Use requestAnimationFrame for smoother dragging
   const handleMouseMove = useCallback((e) => {
     if (!isDragging || isMobileView) return;
     
     requestAnimationFrame(() => {
-      const modalWidth = 384;
-      const modalHeight = 500;
-      const viewportWidth = window.innerWidth;
-      const viewportHeight = window.innerHeight;
-      
-      // Calculate new position
-      let newX = e.clientX - dragOffset.x;
-      let newY = e.clientY - dragOffset.y;
-      
-      // Keep modal within viewport bounds with some margin
-      newX = Math.max(10, Math.min(newX, viewportWidth - modalWidth - 10));
-      newY = Math.max(10, Math.min(newY, viewportHeight - modalHeight - 10));
+      const newX = e.clientX - dragOffset.x;
+      const newY = e.clientY - dragOffset.y;
       
       setPosition({
         x: newX,
@@ -273,7 +259,19 @@ const ChatbotInterface = () => {
 
   const handleMouseUp = useCallback(() => {
     if (!isDragging || isMobileView) return;
+    
     setIsDragging(false);
+    
+    // Ensure the modal stays within viewport bounds
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const modalWidth = 384;
+    const modalHeight = 500;
+
+    setPosition(prev => ({
+      x: Math.max(0, Math.min(prev.x, viewportWidth - modalWidth)),
+      y: Math.max(0, Math.min(prev.y, viewportHeight - modalHeight))
+    }));
   }, [isDragging, isMobileView]);
 
   // Add global mouse event listeners for dragging (conditional on isDragging and not mobile)
@@ -297,65 +295,6 @@ const ChatbotInterface = () => {
       document.body.style.cursor = '';
     };
   }, [isDragging, handleMouseMove, handleMouseUp, isMobileView]);
-
-  // Handle touch events for mobile dragging (optional, but good to have)
-  const handleTouchStart = (e) => {
-    if (isMobileView) return;
-    
-    if (e.target.closest('input, button, a, .no-drag')) return;
-    
-    const touch = e.touches[0];
-    const modalRect = modalRef.current.getBoundingClientRect();
-    const offsetX = touch.clientX - modalRect.left;
-    const offsetY = touch.clientY - modalRect.top;
-    
-    setDragOffset({ x: offsetX, y: offsetY });
-    setIsDragging(true);
-  };
-
-  const handleTouchMove = useCallback((e) => {
-    if (!isDragging || isMobileView) return;
-    
-    const touch = e.touches[0];
-    requestAnimationFrame(() => {
-      const modalWidth = 384;
-      const modalHeight = 500;
-      const viewportWidth = window.innerWidth;
-      const viewportHeight = window.innerHeight;
-      
-      let newX = touch.clientX - dragOffset.x;
-      let newY = touch.clientY - dragOffset.y;
-      
-      newX = Math.max(10, Math.min(newX, viewportWidth - modalWidth - 10));
-      newY = Math.max(10, Math.min(newY, viewportHeight - modalHeight - 10));
-      
-      setPosition({
-        x: newX,
-        y: newY
-      });
-    });
-  }, [isDragging, dragOffset, isMobileView]);
-
-  const handleTouchEnd = useCallback(() => {
-    if (!isDragging || isMobileView) return;
-    setIsDragging(false);
-  }, [isDragging, isMobileView]);
-
-  // Add touch event listeners
-  useEffect(() => {
-    if (isDragging && !isMobileView) {
-      document.addEventListener('touchmove', handleTouchMove, { passive: false });
-      document.addEventListener('touchend', handleTouchEnd);
-    } else {
-      document.removeEventListener('touchmove', handleTouchMove);
-      document.removeEventListener('touchend', handleTouchEnd);
-    }
-
-    return () => {
-      document.removeEventListener('touchmove', handleTouchMove);
-      document.removeEventListener('touchend', handleTouchEnd);
-    };
-  }, [isDragging, handleTouchMove, handleTouchEnd, isMobileView]);
 
   // Message Bubble Component - Memoized to prevent unnecessary re-renders (unchanged)
   const MessageBubble = useCallback(({ message, isUser }) => {
@@ -399,37 +338,33 @@ const ChatbotInterface = () => {
   // Determine the modal style based on screen size
   const modalClasses = isMobileView
     ? "fixed inset-0 w-full h-full rounded-none" // Full screen on mobile
-    : "fixed max-w-md h-[500px] rounded-xl"; // Floating widget on desktop
+    : "fixed bottom-6 right-6 max-w-md h-[500px] rounded-xl"; // Floating widget on desktop
 
   // Determine the modal position style (only for desktop)
-  const modalStyle = isMobileView ? {} : { 
-    left: position.x, 
-    top: position.y,
-    cursor: isDragging ? 'grabbing' : 'grab'
-  };
+  const modalStyle = isMobileView ? {} : { left: position.x, top: position.y };
 
   return (
     <>
       {/* Floating action button */}
       {!isOpen && (
         <motion.button
-          className={`fixed bottom-6 right-6 w-14 h-14 rounded-full ${darkMode ? 'bg-[#2A9D8F]' : 'bg-[#1D3557]'} text-white shadow-lg flex items-center justify-center z-[100]`}
-          onClick={toggleChat}
-          aria-label="Toggle Chatbot"
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.div
-              key="open"
-              initial={{ rotate: 0, opacity: 1 }}
-              animate={{ rotate: 0, opacity: 1 }}
-              transition={{ duration: 0.2 }}
-            >
-              <MessageSquare className="w-6 h-6" />
-            </motion.div>
-          </AnimatePresence>
-        </motion.button>
+        className={`fixed bottom-6 right-6 w-14 h-14 rounded-full ${darkMode ? 'bg-[#2A9D8F]' : 'bg-[#1D3557]'} text-white shadow-lg flex items-center justify-center z-[100]`}
+        onClick={toggleChat}
+        aria-label="Toggle Chatbot"
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+      >
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key="open"
+            initial={{ rotate: 0, opacity: 1 }}
+            animate={{ rotate: 0, opacity: 1 }}
+            transition={{ duration: 0.2 }}
+          >
+            <MessageSquare className="w-6 h-6" />
+          </motion.div>
+        </AnimatePresence>
+      </motion.button>
       )}
 
       {/* Chatbot Modal */}
@@ -444,38 +379,29 @@ const ChatbotInterface = () => {
           >
             <motion.div
               ref={modalRef}
-              className={`flex flex-col shadow-2xl transition-all duration-300 ${modalClasses} ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'} ${!isMobileView && 'border-2 border-gray-300/50'}`}
+              className={`flex flex-col shadow-2xl transition-all duration-300 ${modalClasses} ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}`}
               style={modalStyle}
-              onMouseDown={handleMouseDown}
-              onTouchStart={handleTouchStart}
             >
               {/* Header */}
               <div 
-                className={`flex items-center justify-between p-4 shadow-md flex-shrink-0 ${darkMode ? 'bg-gray-900' : 'bg-[#1D3557]'} text-white rounded-t-xl ${isMobileView ? 'rounded-t-none' : ''} ${!isMobileView ? 'cursor-grab' : ''} no-drag`}
+                className={`flex items-center justify-between p-4 shadow-md flex-shrink-0 ${darkMode ? 'bg-gray-900' : 'bg-[#1D3557]'} text-white rounded-t-xl ${isMobileView ? 'rounded-t-none' : ''} ${!isMobileView ? 'cursor-grab' : ''}`}
+                onMouseDown={handleMouseDown}
               >
                 <div className="flex items-center">
                   <Bot className="w-6 h-6 mr-2" />
                   <h3 className="text-lg font-semibold">Instipass AI Chatbot</h3>
                 </div>
-                <div className="flex items-center space-x-2">
-                  {/* Drag Handle Indicator (Desktop only) */}
-                  {!isMobileView && (
-                    <div className="text-white/70 p-1">
-                      <Move className="w-4 h-4" />
-                    </div>
-                  )}
-                  <button 
-                    onClick={toggleChat} 
-                    className="p-1 rounded-full hover:bg-white/20 transition-colors no-drag" 
-                    aria-label="Close Chat"
-                  >
+                <div className="flex items-center">
+                  {/* Drag Handle (Desktop only) - Removed the Move icon as the whole header is the handle */}
+                  {/* The cursor-grab class is now on the header div */}
+                  <button onClick={toggleChat} className="p-1 rounded-full hover:bg-white/20 transition-colors" aria-label="Close Chat">
                     <X className="w-5 h-5" />
                   </button>
                 </div>
               </div>
 
               {/* Chat Messages Area */}
-              <div className="flex-grow overflow-y-auto p-4 space-y-4 custom-scrollbar no-drag" style={{ minHeight: 0 }}>
+              <div className="flex-grow overflow-y-auto p-4 space-y-4 custom-scrollbar" style={{ minHeight: 0 }}>
                 <AnimatePresence initial={false}>
                   {messages.map((message) => (
                     <MessageBubble key={message.id} message={message} isUser={message.isUser} />
@@ -492,7 +418,7 @@ const ChatbotInterface = () => {
               </div>
 
               {/* Input Area */}
-              <div className={`p-4 border-t flex-shrink-0 no-drag ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'}`}>
+              <div className={`p-4 border-t flex-shrink-0 ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'}`}>
                 {isListening && (
                   <div className="text-center mb-2 text-sm font-medium text-green-500">
                     Listening... {interimTranscript}
