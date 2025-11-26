@@ -26,7 +26,7 @@ const useIsMobile = (breakpoint = 768) => {
   return isMobile;
 };
 
-// FAQ Service with role detection and clarification
+// FAQ Service with intelligent context detection
 class FAQService {
   constructor() {
     this.faqData = {
@@ -61,7 +61,17 @@ class FAQService {
         
         "delivery": "No. IDs are delivered in bulk to institutions. Students collect them per instructions from their school.",
         
-        "cancel application": "Contact support immediately if you need changes or cancellation. Some corrections are possible if addressed early."
+        "cancel application": "Contact support immediately if you need changes or cancellation. Some corrections are possible if addressed early.",
+        
+        "lost id": "Contact your institution admin to report a lost ID and request a replacement. Replacement processes and costs are managed by your institution.",
+        
+        "damaged id": "Contact your institution admin to report a damaged ID and request a replacement. Your institution will guide you on the replacement process.",
+        
+        "change details": "Once submitted, applications cannot be edited. Contact support or your institution immediately if there's an error in your details.",
+        
+        "application status": "You will receive SMS updates at each stage. If you haven't received updates, check your phone number was entered correctly or contact support.",
+        
+        "id not received": "Check with your institution's collection point first. If the issue persists, contact support with your application details."
       },
       institution: {
         "get started": "Book a demo or contact Instipass support. You will be guided on onboarding, portal setup, and the ID application process.",
@@ -74,7 +84,9 @@ class FAQService {
         
         "institution payment": "Yes. Institutions handle all payments. Students are not charged.",
         
-        "payment process": "Two stages: a down payment before production and a final payment before delivery of IDs.",
+        "payment process": "Two stages: a down payment before production and a final payment before delivery of IDs. Payments can be made via M-Pesa, bank transfer, or other agreed payment methods.",
+        
+        "payment methods": "Institutions can pay via M-Pesa, bank transfer, or other pre-arranged payment methods. Contact support for specific payment details.",
         
         "verification": "Instipass verifies applications internally. Institutions do not manually review each submission.",
         
@@ -92,7 +104,17 @@ class FAQService {
         
         "priority processing": "Yes, subject to workload. Contact support to arrange priority.",
         
-        "integration": "Integration may be available depending on your institution's needs. Contact support to explore options."
+        "integration": "Integration may be available depending on your institution's needs. Contact support to explore options.",
+        
+        "bulk upload": "Yes, institutions can upload student data in bulk through the admin portal. Contact support for format specifications.",
+        
+        "replacement ids": "Replacement IDs for lost or damaged cards are processed through the institution admin portal. Additional costs may apply.",
+        
+        "reports": "The admin portal provides various reports on application status, completion rates, and other metrics.",
+        
+        "support contact": "Contact Instipass support via email at support@instipass.com or through the support channel provided during onboarding.",
+        
+        "portal access": "If you're having trouble accessing the institution portal, contact support to reset your credentials or resolve access issues."
       },
       general: {
         "what does instipass do": "Produces physical student IDs while providing a smooth, fully digital application process for students and a management portal for institutions.",
@@ -101,7 +123,17 @@ class FAQService {
         
         "communication channels": "Automated SMS notifications for students; portal notifications for institutions.",
         
-        "data security": "Yes. Data is processed securely under strict agreements with each institution."
+        "data security": "Yes. Data is processed securely under strict agreements with each institution.",
+        
+        "contact support": "For technical issues, contact Instipass support at support@instipass.com. For partnership inquiries, contact partnerships@instipass.com.",
+        
+        "partnership": "For partnership inquiries or to register your institution, contact our partnerships team at partnerships@instipass.com or book a demo through our website.",
+        
+        "demo": "Book a demo through our website or contact partnerships@instipass.com to schedule a demonstration of our services.",
+        
+        "pricing": "Pricing varies based on institution size and requirements. Contact partnerships@instipass.com for detailed pricing information.",
+        
+        "features": "Key features include digital applications, automated SMS notifications, institution admin portal, customizable ID designs, and bulk processing capabilities."
       },
       support: {
         "technical issues": "Contact Instipass support immediately. Provide a detailed description, including screenshots if possible, to help resolve the issue quickly.",
@@ -116,116 +148,120 @@ class FAQService {
         
         "onboarding": "Book a demo or contact support to get guidance on onboarding and portal setup.",
         
-        "bugs": "Direct all such cases to Instipass support. Always include a detailed description and any evidence like screenshots."
+        "bugs": "Direct all such cases to Instipass support. Always include a detailed description and any evidence like screenshots.",
+        
+        "login issues": "For institution portal login issues, contact support to reset your credentials or resolve access problems."
       }
     };
 
-    this.confirmedUserType = null;
+    this.ambiguousTopics = {
+      "payment": {
+        student: "No. Students do not make any payments. All financial responsibilities, including down payments and final payments, are handled entirely by the institution.",
+        institution: "Institutions handle all payments through two stages: a down payment before production and final payment before delivery. Payments can be made via M-Pesa, bank transfer, or other agreed methods."
+      },
+      "portal": {
+        student: "No. Students do not have portals. Interactions are limited to the online application form and SMS notifications.",
+        institution: "Institution admins have access to a comprehensive portal for managing student submissions, monitoring processing, selecting templates, and tracking payment status."
+      },
+      "application": {
+        student: "Students apply through an online form provided by their institution, upload a photo, and receive SMS updates throughout the process.",
+        institution: "Institutions provide application links to students and manage the process through the admin portal, including monitoring submissions and processing status."
+      },
+      "id collection": {
+        student: "Students collect their IDs from their institution's designated collection point as notified via SMS.",
+        institution: "IDs are delivered in bulk to the institution, which then distributes them to students through designated collection points."
+      },
+      "problems": {
+        student: "For application issues, photo rejections, or missing SMS, students should contact support or their institution admin.",
+        institution: "For portal issues, payment problems, or bulk processing, institution admins should contact Instipass support directly."
+      }
+    };
   }
 
-  detectUserTypeFromMessage(prompt, conversationHistory = []) {
+  detectContext(prompt, conversationHistory = []) {
     const lowerPrompt = prompt.toLowerCase();
     const fullConversation = conversationHistory.map(msg => msg.text).join(' ').toLowerCase();
 
-    // Clear user role declarations
-    if (lowerPrompt.includes('i am a student') || lowerPrompt.includes('i\'m a student') || 
-        lowerPrompt.includes('as a student') || lowerPrompt.includes('student here') ||
-        lowerPrompt.includes('my student') || lowerPrompt.includes('apply for my id')) {
-      return 'student';
+    // Strong student indicators
+    const studentIndicators = [
+      'i am a student', 'i\'m a student', 'my id', 'my application', 'collect my id',
+      'when will i get', 'my photo', 'student card', 'personal id', 'i need to apply',
+      'when do i get', 'where do i collect', 'my sms', 'my notification'
+    ];
+
+    // Strong institution indicators
+    const institutionIndicators = [
+      'i am from', 'our institution', 'our students', 'we need', 'our admin',
+      'institution portal', 'admin portal', 'bulk upload', 'multiple students',
+      'payment for', 'our payment', 'manage students', 'institution management'
+    ];
+
+    // Check for explicit statements first
+    for (const indicator of studentIndicators) {
+      if (lowerPrompt.includes(indicator) || fullConversation.includes(indicator)) {
+        return 'student';
+      }
     }
 
-    if (lowerPrompt.includes('i am from') || lowerPrompt.includes('our institution') || 
-        lowerPrompt.includes('we are an institution') || lowerPrompt.includes('institution admin') ||
-        lowerPrompt.includes('our students') || lowerPrompt.includes('institution portal')) {
-      return 'institution';
+    for (const indicator of institutionIndicators) {
+      if (lowerPrompt.includes(indicator) || fullConversation.includes(indicator)) {
+        return 'institution';
+      }
     }
 
-    if (lowerPrompt.includes('i want to partner') || lowerPrompt.includes('our school wants') || 
-        lowerPrompt.includes('interested in partnership') || lowerPrompt.includes('become a partner') ||
-        lowerPrompt.includes('demo for our institution') || lowerPrompt.includes('register our institution')) {
-      return 'prospective';
-    }
-
-    // Role selection responses
-    if (lowerPrompt.includes('student') || lowerPrompt === '1') {
-      return 'student';
-    }
-    if (lowerPrompt.includes('institution') || lowerPrompt === '2') {
-      return 'institution';
-    }
-    if (lowerPrompt.includes('prospective') || lowerPrompt.includes('partner') || lowerPrompt === '3') {
-      return 'prospective';
-    }
-
-    // Context-based detection
+    // Content-based detection
     const studentKeywords = [
-      'my id', 'my application', 'collect my id', 'when will i get', 'my photo',
-      'i applied', 'my student id', 'get my id', 'pick up my id', 'student card'
+      'apply', 'application', 'photo', 'picture', 'sms', 'notification',
+      'collect', 'pick up', 'get id', 'student card', 'lost id', 'damaged',
+      'replacement', 'when will i', 'my photo', 'personal id', 'collection point'
     ];
 
     const institutionKeywords = [
-      'our students', 'bulk upload', 'admin portal', 'institution dashboard',
-      'student management', 'payment invoice', 'our institution', 'portal login'
-    ];
-
-    const prospectiveKeywords = [
-      'partnership', 'register institution', 'sign up our', 'demo meeting',
-      'pricing package', 'features benefits', 'start using instipass'
+      'portal', 'dashboard', 'bulk', 'upload', 'students list', 'report',
+      'analytics', 'payment', 'invoice', 'management', 'credentials',
+      'admin access', 'multiple students', 'batch', 'institution', 'school',
+      'university', 'college'
     ];
 
     let studentScore = studentKeywords.filter(keyword => 
-      lowerPrompt.includes(keyword) || fullConversation.includes(keyword)
+      lowerPrompt.includes(keyword)
     ).length;
 
     let institutionScore = institutionKeywords.filter(keyword => 
-      lowerPrompt.includes(keyword) || fullConversation.includes(keyword)
+      lowerPrompt.includes(keyword)
     ).length;
 
-    let prospectiveScore = prospectiveKeywords.filter(keyword => 
-      lowerPrompt.includes(keyword) || fullConversation.includes(keyword)
-    ).length;
+    // Check for ambiguous topics that need clarification
+    const ambiguousTopics = Object.keys(this.ambiguousTopics);
+    const isAmbiguous = ambiguousTopics.some(topic => 
+      lowerPrompt.includes(topic) && Math.abs(studentScore - institutionScore) <= 1
+    );
 
-    // If we have a confirmed user type, use it
-    if (this.confirmedUserType) {
-      return this.confirmedUserType;
+    if (isAmbiguous) {
+      return 'ambiguous';
     }
 
-    // Return the highest scoring type, but only if significantly higher than others
-    const scores = [studentScore, institutionScore, prospectiveScore];
-    const maxScore = Math.max(...scores);
-    const totalScore = studentScore + institutionScore + prospectiveScore;
-
-    if (maxScore === 0 || maxScore <= 1) {
-      return 'unclear';
-    }
-
-    if (studentScore === maxScore && studentScore > institutionScore && studentScore > prospectiveScore) {
+    if (studentScore > institutionScore) {
       return 'student';
-    } else if (institutionScore === maxScore && institutionScore > studentScore && institutionScore > prospectiveScore) {
+    } else if (institutionScore > studentScore) {
       return 'institution';
-    } else if (prospectiveScore === maxScore && prospectiveScore > studentScore && prospectiveScore > institutionScore) {
-      return 'prospective';
     }
 
-    return 'unclear';
+    return 'general';
   }
 
-  setConfirmedUserType(userType) {
-    this.confirmedUserType = userType;
-  }
-
-  findBestMatch(query, userType) {
+  findBestMatch(query, context) {
     const lowerQuery = query.toLowerCase();
     let bestMatch = null;
     let bestScore = 0;
 
-    // Search in user type specific FAQs first
-    if (this.faqData[userType]) {
-      for (const [key, answer] of Object.entries(this.faqData[userType])) {
+    // Search in context-specific FAQs first
+    if (context !== 'ambiguous' && this.faqData[context]) {
+      for (const [key, answer] of Object.entries(this.faqData[context])) {
         const score = this.calculateMatchScore(lowerQuery, key);
         if (score > bestScore) {
           bestScore = score;
-          bestMatch = { answer, section: userType };
+          bestMatch = { answer, section: context };
         }
       }
     }
@@ -252,15 +288,13 @@ class FAQService {
   }
 
   calculateMatchScore(query, faqKey) {
-    const queryWords = query.split(' ').filter(word => word.length > 2);
-    const faqWords = faqKey.split(' ').filter(word => word.length > 2);
-    
-    if (queryWords.length === 0 || faqWords.length === 0) return 0;
+    const queryWords = query.split(' ');
+    const faqWords = faqKey.split(' ');
     
     let matches = 0;
     queryWords.forEach(qWord => {
       faqWords.forEach(fWord => {
-        if (qWord.includes(fWord) || fWord.includes(qWord)) {
+        if (qWord.length > 2 && fWord.length > 2 && qWord.includes(fWord)) {
           matches++;
         }
       });
@@ -269,75 +303,48 @@ class FAQService {
     return matches / Math.max(queryWords.length, faqWords.length);
   }
 
-  generateResponse(prompt, conversationHistory = [], currentUserType = 'unclear') {
-    // Handle role selection
-    const lowerPrompt = prompt.toLowerCase().trim();
+  generateResponse(prompt, conversationHistory = []) {
+    const context = this.detectContext(prompt, conversationHistory);
     
-    if (lowerPrompt === '1' || lowerPrompt === 'student') {
-      this.setConfirmedUserType('student');
-      return {
-        response: "Great! I'll help you with student-related questions about ID applications, photo requirements, SMS notifications, and collection processes. What would you like to know?",
-        userType: 'student',
-        confirmed: true
-      };
+    // Handle ambiguous topics with contextual responses
+    if (context === 'ambiguous') {
+      const ambiguousTopic = Object.keys(this.ambiguousTopics).find(topic => 
+        prompt.toLowerCase().includes(topic)
+      );
+      
+      if (ambiguousTopic) {
+        return {
+          text: `I notice you're asking about ${ambiguousTopic}. This works differently depending on your role:\n\n` +
+                `**For Students:** ${this.ambiguousTopics[ambiguousTopic].student}\n\n` +
+                `**For Institutions:** ${this.ambiguousTopics[ambiguousTopic].institution}\n\n` +
+                `Which one applies to you?`,
+          context: 'ambiguous',
+          isAmbiguous: true
+        };
+      }
     }
 
-    if (lowerPrompt === '2' || lowerPrompt === 'institution') {
-      this.setConfirmedUserType('institution');
-      return {
-        response: "Excellent! I'll assist you with institution portal access, student management, payments, and administrative functions. What would you like to know?",
-        userType: 'institution',
-        confirmed: true
-      };
-    }
-
-    if (lowerPrompt === '3' || lowerPrompt === 'prospective' || lowerPrompt === 'partner') {
-      this.setConfirmedUserType('prospective');
-      return {
-        response: "Perfect! I can provide information about partnership opportunities, institution registration, and platform features. What would you like to know?",
-        userType: 'prospective',
-        confirmed: true
-      };
-    }
-
-    // Detect user type from conversation
-    const detectedUserType = this.detectUserTypeFromMessage(prompt, conversationHistory);
-    
-    // If user type is unclear and we don't have a confirmed type, ask for clarification
-    if (detectedUserType === 'unclear' && !this.confirmedUserType) {
-      return {
-        response: "I'd love to help you! To give you the most accurate information, could you please tell me if you are:\n\n1. A **Student** - asking about ID applications, photos, or collection\n2. An **Institution** - asking about admin portal, payments, or student management\n3. A **Prospective Partner** - interested in partnership or registration\n\nJust type 1, 2, or 3, or tell me which category you belong to.",
-        userType: 'unclear',
-        needsClarification: true
-      };
-    }
-
-    // Use confirmed user type or detected type
-    const userTypeToUse = this.confirmedUserType || detectedUserType;
-
-    // Try to find FAQ match
-    const match = this.findBestMatch(prompt, userTypeToUse);
+    const match = this.findBestMatch(prompt, context);
 
     if (match) {
       return {
-        response: match.answer,
-        userType: userTypeToUse,
-        confirmed: !!this.confirmedUserType
+        text: match.answer,
+        context: context,
+        isAmbiguous: false
       };
     }
 
-    // Default responses based on user type
+    // Default responses based on detected context
     const defaultResponses = {
-      student: "I can help you with student ID applications, photo requirements, SMS notifications, and collection procedures. Please ask about any specific aspect of the student ID process, and I'll provide the exact information from our FAQ.",
-      institution: "I can assist with institution portal access, payment processes, student management, and administrative functions. Please ask about any specific institutional process, and I'll provide the exact information from our FAQ.",
-      prospective: "For partnership inquiries, institution registration, or demo requests, please contact our partnerships team directly. I can provide general information about Instipass services from our FAQ.",
-      general: "I'm here to help with Instipass services. Please ask about student applications, institutional processes, or general information, and I'll provide the exact answer from our FAQ."
+      student: "I can help you with student ID applications, photo requirements, SMS notifications, and collection procedures. Please ask about any specific aspect of the student ID process.",
+      institution: "I can assist with institution portal access, payment processes, student management, and administrative functions. Please ask about any specific institutional process.",
+      general: "I'm here to help with Instipass services. Please ask about student applications, institutional processes, or general information."
     };
 
     return {
-      response: defaultResponses[userTypeToUse] || defaultResponses.general,
-      userType: userTypeToUse,
-      confirmed: !!this.confirmedUserType
+      text: defaultResponses[context] || defaultResponses.general,
+      context: context,
+      isAmbiguous: false
     };
   }
 }
@@ -345,34 +352,31 @@ class FAQService {
 // Initialize FAQ service
 const faqService = new FAQService();
 
-// User Type Indicator Component
-const UserTypeIndicator = ({ userType }) => {
+// Context Indicator Component
+const ContextIndicator = ({ context }) => {
   const getIcon = () => {
-    switch (userType) {
+    switch (context) {
       case 'student': return <GraduationCap className="w-3 h-3" />;
       case 'institution': return <Building className="w-3 h-3" />;
-      case 'prospective': return <Users className="w-3 h-3" />;
-      case 'unclear': return <User className="w-3 h-3" />;
+      case 'ambiguous': return <Users className="w-3 h-3" />;
       default: return <User className="w-3 h-3" />;
     }
   };
 
   const getLabel = () => {
-    switch (userType) {
-      case 'student': return 'Student';
-      case 'institution': return 'Institution';
-      case 'prospective': return 'Prospective Partner';
-      case 'unclear': return 'Role Not Set';
-      default: return 'User';
+    switch (context) {
+      case 'student': return 'Student Context';
+      case 'institution': return 'Institution Context';
+      case 'ambiguous': return 'Multiple Contexts';
+      default: return 'General';
     }
   };
 
   const getColor = () => {
-    switch (userType) {
+    switch (context) {
       case 'student': return 'bg-blue-500';
       case 'institution': return 'bg-green-500';
-      case 'prospective': return 'bg-purple-500';
-      case 'unclear': return 'bg-gray-500';
+      case 'ambiguous': return 'bg-purple-500';
       default: return 'bg-gray-500';
     }
   };
@@ -385,47 +389,6 @@ const UserTypeIndicator = ({ userType }) => {
   );
 };
 
-// Role Selection Buttons Component
-const RoleSelectionButtons = ({ onRoleSelect, darkMode }) => {
-  return (
-    <div className="flex flex-col space-y-2 mt-3">
-      <span className="text-sm font-medium">Select your role:</span>
-      <div className="flex flex-wrap gap-2">
-        <button
-          onClick={() => onRoleSelect('student')}
-          className={`px-3 py-2 rounded-lg text-sm transition-colors ${
-            darkMode 
-              ? 'bg-blue-600 hover:bg-blue-700 text-white' 
-              : 'bg-blue-100 hover:bg-blue-200 text-blue-800'
-          }`}
-        >
-          👨‍🎓 Student
-        </button>
-        <button
-          onClick={() => onRoleSelect('institution')}
-          className={`px-3 py-2 rounded-lg text-sm transition-colors ${
-            darkMode 
-              ? 'bg-green-600 hover:bg-green-700 text-white' 
-              : 'bg-green-100 hover:bg-green-200 text-green-800'
-          }`}
-        >
-          🏫 Institution
-        </button>
-        <button
-          onClick={() => onRoleSelect('prospective')}
-          className={`px-3 py-2 rounded-lg text-sm transition-colors ${
-            darkMode 
-              ? 'bg-purple-600 hover:bg-purple-700 text-white' 
-              : 'bg-purple-100 hover:bg-purple-200 text-purple-800'
-          }`}
-        >
-          🤝 Prospective Partner
-        </button>
-      </div>
-    </div>
-  );
-};
-
 // Main Chatbot Component
 const ChatbotInterface = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -434,17 +397,15 @@ const ChatbotInterface = () => {
   const [messages, setMessages] = useState([
     { 
       id: 1, 
-      text: "Hello! I'm Instipass FAQ Assistant. I can help students, institutions, and prospective partners with questions about our student ID services.\n\nTo give you the best assistance, could you tell me which category you belong to?",
+      text: "Hello! I'm Instipass FAQ Assistant. I provide exact answers from our official documentation about student ID applications, institutional processes, and general information. How can I help you today?", 
       isUser: false, 
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      userType: 'unclear',
-      showRoleButtons: true
+      context: 'general'
     },
   ]);
   const [isTyping, setIsTyping] = useState(false);
   const [apiError, setApiError] = useState('');
-  const [currentUserType, setCurrentUserType] = useState('unclear');
-  const [needsRoleClarification, setNeedsRoleClarification] = useState(true);
+  const [currentContext, setCurrentContext] = useState('general');
   
   // Desktop-only dragging states
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -589,21 +550,7 @@ const ChatbotInterface = () => {
     }
   };
 
-  // Handle role selection
-  const handleRoleSelect = (role) => {
-    const roleMessages = {
-      student: "I'm a student asking about ID applications",
-      institution: "I'm from an institution asking about admin portal",
-      prospective: "I'm interested in partnership for our institution"
-    };
-
-    setInput(roleMessages[role]);
-    setTimeout(() => {
-      handleSend();
-    }, 100);
-  };
-
-  // Handle send message with FAQ-based responses
+  // Handle send message with intelligent context detection
   const handleSend = async () => {
     if (input.trim() === '') return;
 
@@ -612,7 +559,7 @@ const ChatbotInterface = () => {
       text: input.trim(),
       isUser: true,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      userType: currentUserType
+      context: currentContext
     };
 
     setMessages(prev => [...prev, newMessage]);
@@ -622,22 +569,19 @@ const ChatbotInterface = () => {
 
     try {
       // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 800));
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
-      const response = faqService.generateResponse(input.trim(), messages, currentUserType);
+      const response = faqService.generateResponse(input.trim(), messages);
       
       const botResponse = {
         id: Date.now() + 1,
-        text: response.response,
+        text: response.text,
         isUser: false,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        userType: response.userType,
-        showRoleButtons: response.needsClarification
+        context: response.context
       };
       
-      setCurrentUserType(response.userType);
-      setNeedsRoleClarification(response.needsClarification || false);
-      
+      setCurrentContext(response.context);
       setMessages(prev => [...prev, botResponse]);
     } catch (error) {
       console.error('Error generating response:', error);
@@ -648,7 +592,7 @@ const ChatbotInterface = () => {
         text: "I'm currently experiencing technical difficulties. Please try again in a moment or contact Instipass support directly for immediate assistance.",
         isUser: false,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        userType: currentUserType
+        context: 'general'
       };
       
       setMessages(prev => [...prev, fallbackResponse]);
@@ -662,22 +606,6 @@ const ChatbotInterface = () => {
     if (!isOpen) {
       setApiError('');
       setRecognitionError('');
-      // Reset to initial state when reopening
-      if (isOpen === false) {
-        setMessages([
-          { 
-            id: 1, 
-            text: "Hello! I'm Instipass FAQ Assistant. I can help students, institutions, and prospective partners with questions about our student ID services.\n\nTo give you the best assistance, could you tell me which category you belong to?",
-            isUser: false, 
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            userType: 'unclear',
-            showRoleButtons: true
-          },
-        ]);
-        setCurrentUserType('unclear');
-        setNeedsRoleClarification(true);
-        faqService.confirmedUserType = null;
-      }
     }
   };
 
@@ -777,21 +705,16 @@ const ChatbotInterface = () => {
             }`}>
               {isUser ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
             </div>
-            <div className="flex flex-col">
-              <div className="flex items-start mb-1 flex-col">
-                <p className="text-sm whitespace-pre-wrap">{message.text}</p>
-                {!isUser && message.showRoleButtons && (
-                  <RoleSelectionButtons onRoleSelect={handleRoleSelect} darkMode={darkMode} />
-                )}
+            <div className="flex flex-col flex-1">
+              <div className="flex items-start mb-1">
+                <p className="text-sm whitespace-pre-wrap flex-1">{message.text}</p>
+                {isUser && <ContextIndicator context={message.context} />}
               </div>
-              <div className="flex items-center justify-between mt-1">
-                <span className={`text-xs ${
-                  isUser ? 'text-white/70' : `${darkMode ? 'text-gray-400' : 'text-gray-500'}`
-                }`}>
-                  {message.timestamp}
-                </span>
-                {isUser && <UserTypeIndicator userType={message.userType} />}
-              </div>
+              <span className={`text-xs mt-1 ${
+                isUser ? 'text-white/70' : `${darkMode ? 'text-gray-400' : 'text-gray-500'}`
+              }`}>
+                {message.timestamp}
+              </span>
             </div>
           </div>
         </div>
@@ -845,8 +768,8 @@ const ChatbotInterface = () => {
                   <div>
                     <h3 className="text-lg font-semibold">Instipass FAQ Assistant</h3>
                     <div className="flex items-center text-xs opacity-80">
-                      <span>Role: </span>
-                      <UserTypeIndicator userType={currentUserType} />
+                      <span>Context: </span>
+                      <ContextIndicator context={currentContext} />
                     </div>
                   </div>
                 </div>
@@ -877,7 +800,7 @@ const ChatbotInterface = () => {
                       <div className="flex items-center space-x-2">
                         <Loader2 className="w-4 h-4 animate-spin" />
                         <span className="text-sm">Searching FAQ...</span>
-                        <UserTypeIndicator userType={currentUserType} />
+                        <ContextIndicator context={currentContext} />
                       </div>
                     </div>
                   </div>
@@ -903,7 +826,7 @@ const ChatbotInterface = () => {
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder={needsRoleClarification ? "Type 1, 2, or 3 to select your role..." : "Ask about student IDs, institutional processes..."}
+                    placeholder="Ask about student applications, institutional processes..."
                     className={`flex-grow p-3 border rounded-l-lg focus:outline-none focus:ring-2 focus:ring-[#2A9D8F] transition-all ${
                       darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
                     }`}
@@ -939,7 +862,7 @@ const ChatbotInterface = () => {
                   </button>
                 </div>
                 <div className="text-xs text-gray-500 mt-2 text-center">
-                  {needsRoleClarification ? "Select your role to get started • 1=Student, 2=Institution, 3=Partner" : "Strict FAQ-based responses • Instipass Student ID Services"}
+                  Intelligent context detection • Instipass Student ID Services
                 </div>
               </div>
             </motion.div>
