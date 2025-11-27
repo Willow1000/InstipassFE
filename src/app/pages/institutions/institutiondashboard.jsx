@@ -365,6 +365,352 @@ const useBalancesData = (token) => {
   return { balancesData, balancesError, balancesLoading, mutateBalances };
 };
 
+// NEW: Student Data Download Component
+const StudentDataDownload = ({ students, settingsData, balancesData, darkMode, onSuccess }) => {
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadFormat, setDownloadFormat] = useState('xlsx');
+  const [error, setError] = useState('');
+
+  // Check if download conditions are met
+  const canDownload = useMemo(() => {
+    if (!students || !settingsData || !balancesData) return false;
+
+    // Condition 1: No balances
+    const hasNoBalance = (() => {
+      if (!balancesData) return true;
+      
+      if (Array.isArray(balancesData) && balancesData.length > 0) {
+        return parseFloat(balancesData[0].amount || 0) === 0;
+      }
+      
+      if (balancesData.amount !== undefined) {
+        return parseFloat(balancesData.amount || 0) === 0;
+      }
+      
+      if (balancesData.balance !== undefined) {
+        return parseFloat(balancesData.balance || 0) === 0;
+      }
+      
+      return true;
+    })();
+
+    // Condition 2: Student count within reasonable proximity to expected total
+    const isWithinProximity = (() => {
+      const settings = Array.isArray(settingsData) ? settingsData[0] : settingsData;
+      const expectedTotal = settings?.expected_total || 0;
+      
+      if (expectedTotal === 0) return true; // No expected total set, allow download
+      
+      const actualTotal = students.length;
+      const proximityThreshold = 0.1; // 10% threshold
+      
+      return Math.abs(actualTotal - expectedTotal) <= (expectedTotal * proximityThreshold);
+    })();
+
+    return hasNoBalance && isWithinProximity;
+  }, [students, settingsData, balancesData]);
+
+  // Format student data for export
+  const formatStudentData = useCallback(() => {
+    if (!students) return [];
+
+    return students.map(student => ({
+      'ID': student.id,
+      'Registration Number': student.reg_no,
+      'First Name': student.first_name,
+      'Last Name': student.last_name,
+      'Course': student.course,
+      'Admission Year': student.admission_year,
+      'Email': student.email,
+      'Phone Number': student.phone_number,
+      'Status': student.status,
+      'Submission Date': student.created_at ? new Date(student.created_at).toLocaleDateString() : 'N/A',
+      'Last Updated': student.updated_at ? new Date(student.updated_at).toLocaleDateString() : 'N/A'
+    }));
+  }, [students]);
+
+  // Download as Excel
+  const downloadExcel = useCallback(async () => {
+    try {
+      const XLSX = await import('xlsx');
+      const worksheet = XLSX.utils.json_to_sheet(formatStudentData());
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Students');
+      XLSX.writeFile(workbook, `students_data_${new Date().toISOString().split('T')[0]}.xlsx`);
+      return true;
+    } catch (error) {
+      console.error('Error generating Excel file:', error);
+      throw new Error('Failed to generate Excel file');
+    }
+  }, [formatStudentData]);
+
+  // Download as PDF
+  // In the StudentDataDownload component, replace the downloadPDF function with this corrected version:
+
+const downloadPDF = useCallback(async () => {
+  try {
+    const { jsPDF } = await import('jspdf');
+    // Import autoTable properly
+    const autoTableModule = await import('jspdf-autotable');
+    
+    const doc = new jsPDF();
+    const studentData = formatStudentData();
+    
+    if (studentData.length === 0) {
+      throw new Error('No student data available');
+    }
+    
+    // Add title
+    doc.setFontSize(16);
+    doc.text('Student Data Export', 14, 15);
+    
+    // Add export date
+    doc.setFontSize(10);
+    doc.text(`Exported on: ${new Date().toLocaleDateString()}`, 14, 22);
+    doc.text(`Total Students: ${studentData.length}`, 14, 28);
+    
+    // Prepare table data
+    const headers = Object.keys(studentData[0] || {});
+    const data = studentData.map(student => Object.values(student));
+    
+    // Use autoTable properly - check if it's a function or needs to be called differently
+    if (typeof autoTableModule.default === 'function') {
+      autoTableModule.default(doc, {
+        head: [headers],
+        body: data,
+        startY: 35,
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [41, 157, 143] }
+      });
+    } else {
+      // Fallback if autoTable is attached to jsPDF prototype
+      doc.autoTable({
+        head: [headers],
+        body: data,
+        startY: 35,
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [41, 157, 143] }
+      });
+    }
+    
+    doc.save(`students_data_${new Date().toISOString().split('T')[0]}.pdf`);
+    return true;
+  } catch (error) {
+    console.error('Error generating PDF file:', error);
+    
+    // Fallback: Create a simple PDF without autoTable
+    try {
+      const { jsPDF } = await import('jspdf');
+      const doc = new jsPDF();
+      const studentData = formatStudentData();
+      
+      doc.setFontSize(16);
+      doc.text('Student Data Export', 20, 20);
+      doc.setFontSize(10);
+      doc.text(`Exported on: ${new Date().toLocaleDateString()}`, 20, 30);
+      doc.text(`Total Students: ${studentData.length}`, 20, 40);
+      
+      let yPosition = 50;
+      studentData.forEach((student, index) => {
+        if (yPosition > 280) {
+          doc.addPage();
+          yPosition = 20;
+        }
+        
+        doc.text(`${index + 1}. ${student['Registration Number']}: ${student['First Name']} ${student['Last Name']}`, 20, yPosition);
+        yPosition += 10;
+      });
+      
+      doc.save(`students_data_simple_${new Date().toISOString().split('T')[0]}.pdf`);
+      return true;
+    } catch (fallbackError) {
+      console.error('Fallback PDF generation also failed:', fallbackError);
+      throw new Error('Failed to generate PDF file');
+    }
+  }
+}, [formatStudentData]);
+
+  const handleDownload = async () => {
+    if (!canDownload) return;
+    
+    setIsDownloading(true);
+    setError('');
+
+    try {
+      let success = false;
+      
+      if (downloadFormat === 'xlsx') {
+        success = await downloadExcel();
+      } else {
+        success = await downloadPDF();
+      }
+      
+      if (success && onSuccess) {
+        onSuccess(`Student data downloaded successfully as ${downloadFormat.toUpperCase()}!`);
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  // Get reason why download is disabled
+  const getDisabledReason = useMemo(() => {
+    if (canDownload) return null;
+
+    const reasons = [];
+
+    // Check balance condition
+    if (balancesData) {
+      const balance = (() => {
+        if (Array.isArray(balancesData) && balancesData.length > 0) {
+          return parseFloat(balancesData[0].amount || 0);
+        }
+        if (balancesData.amount !== undefined) {
+          return parseFloat(balancesData.amount || 0);
+        }
+        if (balancesData.balance !== undefined) {
+          return parseFloat(balancesData.balance || 0);
+        }
+        return 0;
+      })();
+
+      if (balance > 0) {
+        reasons.push(`Outstanding balance of KES ${balance.toFixed(2)}`);
+      }
+    }
+
+    // Check student count condition
+    if (settingsData && students) {
+      const settings = Array.isArray(settingsData) ? settingsData[0] : settingsData;
+      const expectedTotal = settings?.expected_total || 0;
+      
+      if (expectedTotal > 0) {
+        const actualTotal = students.length;
+        const proximityThreshold = 0.1; // 10% threshold
+        const isWithinProximity = Math.abs(actualTotal - expectedTotal) <= (expectedTotal * proximityThreshold);
+        
+        if (!isWithinProximity) {
+          reasons.push(`Student count (${actualTotal}) is not within 90% of expected total (${expectedTotal})`);
+        }
+      }
+    }
+
+    return reasons.length > 0 ? reasons.join(' and ') : 'Conditions not met';
+  }, [canDownload, balancesData, settingsData, students]);
+
+  if (!students || students.length === 0) {
+    return null;
+  }
+
+  return (
+    <motion.div 
+      className={`p-6 rounded-2xl shadow-md ${darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'}`}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
+        <div className="flex-1">
+          <h3 className={`text-lg font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+            Download Student Data
+          </h3>
+          <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+            Download complete student records in your preferred format. Available only when all conditions are met.
+          </p>
+        </div>
+        
+        <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 mt-4 md:mt-0">
+          <div className="relative">
+            <select
+              value={downloadFormat}
+              onChange={(e) => setDownloadFormat(e.target.value)}
+              className={`pl-3 pr-8 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent appearance-none ${
+                darkMode 
+                  ? 'bg-gray-700 border-gray-600 text-white' 
+                  : 'bg-white border-gray-300 text-gray-900'
+              }`}
+              disabled={!canDownload || isDownloading}
+            >
+              <option value="xlsx">Excel (.xlsx)</option>
+              <option value="pdf">PDF (.pdf)</option>
+            </select>
+            <ChevronDown className={`absolute right-2 top-1/2 transform -translate-y-1/2 ${darkMode ? 'text-gray-400' : 'text-gray-500'} pointer-events-none`} size={16} />
+          </div>
+          
+          <button
+            onClick={handleDownload}
+            disabled={!canDownload || isDownloading}
+            className={`px-6 py-2 rounded-lg font-medium transition-colors flex items-center ${
+              canDownload && !isDownloading
+                ? 'bg-teal-600 text-white hover:bg-teal-700' 
+                : 'bg-gray-400 text-gray-200 cursor-not-allowed'
+            }`}
+            title={!canDownload ? getDisabledReason : `Download as ${downloadFormat.toUpperCase()}`}
+          >
+            {isDownloading ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
+                Downloading...
+              </>
+            ) : (
+              <>
+                <Download size={16} className="mr-2" />
+                Download Data
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Error Message */}
+      {error && (
+        <motion.div 
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          className="mb-4 p-3 bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-300 text-sm"
+        >
+          <div className="flex items-center">
+            <AlertTriangle size={16} className="mr-2" />
+            <span>{error}</span>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Conditions Information */}
+      <div className={`p-4 rounded-lg ${darkMode ? 'bg-blue-900/20 border border-blue-800' : 'bg-blue-50 border border-blue-200'}`}>
+        <div className="flex items-start">
+          <Info size={16} className={`mt-0.5 mr-3 flex-shrink-0 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} />
+          <div>
+            <h4 className={`font-medium mb-2 ${darkMode ? 'text-white' : 'text-gray-800'}`}>Download Conditions</h4>
+            <ul className={`text-sm space-y-1 ${darkMode ? 'text-blue-300' : 'text-blue-700'}`}>
+              <li>• No outstanding balances</li>
+              <li>• Student count within 90% of expected total</li>
+              <li>• Available formats: Excel (.xlsx) and PDF (.pdf)</li>
+            </ul>
+            
+            {!canDownload && getDisabledReason && (
+              <div className={`mt-2 p-2 rounded text-xs ${darkMode ? 'bg-yellow-900/30 border border-yellow-800 text-yellow-300' : 'bg-yellow-50 border border-yellow-200 text-yellow-700'}`}>
+                <strong>Currently unavailable:</strong> {getDisabledReason}
+              </div>
+            )}
+            
+            {canDownload && (
+              <div className={`mt-2 p-2 rounded text-xs ${darkMode ? 'bg-green-900/30 border border-green-800 text-green-300' : 'bg-green-50 border border-green-200 text-green-700'}`}>
+                <strong>Ready to download:</strong> All conditions are met. You can download student data.
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Student Count Summary */}
+     
+    </motion.div>
+  );
+};
+
 // Reusable StatCard component
 const StatCard = ({ title, value, icon, darkMode, colorClass = '' }) => (
   <motion.div 
@@ -3373,6 +3719,15 @@ const TemplateSettingsPage = ({ settingsData, loading, error, darkMode, onUpdate
           onSuccess={onSuccess}
         />
 
+        {/* NEW: Student Data Download Section */}
+        <StudentDataDownload
+          students={students}
+          settingsData={settingsData}
+          balancesData={balancesData}
+          darkMode={darkMode}
+          onSuccess={onSuccess}
+        />
+
         {/* Summary Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6">
           <StatCard 
@@ -3733,6 +4088,7 @@ const InstitutionDashboard = () => {
   const { students, error: studentsError, isLoading: studentsLoading, mutate: refreshStudents } = useStudentsData(token);
   const { settingsData, settingsError, settingsLoading, mutateSettings } = useSettingsData(token);
   const { notificationsData, notificationsError, notificationsLoading, mutateNotifications } = useNotificationsData(token);
+  const { balancesData } = useBalancesData(token);
 
   // Calculate unread notifications count
   const unreadCount = useMemo(() => {
@@ -3798,6 +4154,11 @@ const InstitutionDashboard = () => {
     setShowSuccessNotification(true);
   };
 
+  const handleDownloadSuccess = (message) => {
+    setSuccessMessage(message);
+    setShowSuccessNotification(true);
+  };
+
   const renderMainContent = () => {
     switch (activePage) {
       case 'template-settings':
@@ -3838,7 +4199,7 @@ const InstitutionDashboard = () => {
           settingsData={settingsData}
           settingsLoading={settingsLoading}
           institutionData={institutionData}
-          onSuccess={handleRegistrationLinksSuccess}
+          onSuccess={handleDownloadSuccess}
         />;
     }
   };
