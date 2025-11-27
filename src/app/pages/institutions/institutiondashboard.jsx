@@ -440,7 +440,7 @@ const StudentDataDownload = ({ students, settingsData, balancesData, darkMode, o
       return true;
     } catch (error) {
       console.error('Error generating Excel file:', error);
-      throw new Error('Failed to generate Excel file');
+      throw new Error('Failed to generate Excel file if error persists, kindly report the issue.');
     }
   }, [formatStudentData]);
 
@@ -525,7 +525,7 @@ const downloadPDF = useCallback(async () => {
       return true;
     } catch (fallbackError) {
       console.error('Fallback PDF generation also failed:', fallbackError);
-      throw new Error('Failed to generate PDF file');
+      throw new Error('Failed to generate PDF file. If problem persists, kindly report issue.');
     }
   }
 }, [formatStudentData]);
