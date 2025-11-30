@@ -12,8 +12,7 @@ import {
   Search, 
   Activity, 
   Clock, 
-  Bank,
-  ShieldCheck, 
+
   AlertTriangle, 
   CheckCircle, 
   ChevronDown, 
@@ -24,7 +23,7 @@ import {
   Menu, 
   X,
   RefreshCw,
-  Share2,
+
   CreditCard,
   DollarSign,
   Calendar,
@@ -33,9 +32,9 @@ import {
   Download,
   Upload,
   Image as ImageIcon,
-  MessageSquare,
+
   Info,
-  Banknote,
+
   Building,
   MapPin,
   Mail,
@@ -289,9 +288,27 @@ const useInstitutionData = (token) => {
   return { institutionData, institutionError, institutionLoading, mutateInstitution };
 };
 
-const useStudentsData = (token) => {
-  const { data: students, error, isLoading, mutate } = useSWR(
-    token ? [STUDENTS_API_URL, token] : null, 
+// UPDATED: Students data hook with cursor pagination
+const useStudentsData = (token, cursor = null, searchParams = {}) => {
+  const buildStudentsUrl = useCallback((cursor, searchParams) => {
+    const url = new URL(STUDENTS_API_URL);
+    
+    if (cursor) {
+      url.searchParams.append('cursor', cursor);
+    }
+    
+    // Add search and filter parameters
+    Object.keys(searchParams).forEach(key => {
+      if (searchParams[key]) {
+        url.searchParams.append(key, searchParams[key]);
+      }
+    });
+    
+    return url.toString();
+  }, []);
+
+  const { data, error, isLoading, mutate } = useSWR(
+    token ? [buildStudentsUrl(cursor, searchParams), token] : null, 
     fetcher, 
     {
       refreshInterval: 300000, // 5 minutes
@@ -305,7 +322,20 @@ const useStudentsData = (token) => {
     }
   );
 
-  return { students, error, isLoading, mutate };
+  // Extract students from paginated response
+  const students = data?.results || [];
+  const pagination = data ? {
+    next: data.next,
+    previous: data.previous
+  } : null;
+
+  return { 
+    students, 
+    error, 
+    isLoading, 
+    mutate,
+    pagination 
+  };
 };
 
 const useSettingsData = (token) => {
@@ -445,90 +475,88 @@ const StudentDataDownload = ({ students, settingsData, balancesData, darkMode, o
   }, [formatStudentData]);
 
   // Download as PDF
-  // In the StudentDataDownload component, replace the downloadPDF function with this corrected version:
-
-const downloadPDF = useCallback(async () => {
-  try {
-    const { jsPDF } = await import('jspdf');
-    // Import autoTable properly
-    const autoTableModule = await import('jspdf-autotable');
-    
-    const doc = new jsPDF();
-    const studentData = formatStudentData();
-    
-    if (studentData.length === 0) {
-      throw new Error('No student data available');
-    }
-    
-    // Add title
-    doc.setFontSize(16);
-    doc.text('Student Data Export', 14, 15);
-    
-    // Add export date
-    doc.setFontSize(10);
-    doc.text(`Exported on: ${new Date().toLocaleDateString()}`, 14, 22);
-    doc.text(`Total Students: ${studentData.length}`, 14, 28);
-    
-    // Prepare table data
-    const headers = Object.keys(studentData[0] || {});
-    const data = studentData.map(student => Object.values(student));
-    
-    // Use autoTable properly - check if it's a function or needs to be called differently
-    if (typeof autoTableModule.default === 'function') {
-      autoTableModule.default(doc, {
-        head: [headers],
-        body: data,
-        startY: 35,
-        styles: { fontSize: 8 },
-        headStyles: { fillColor: [41, 157, 143] }
-      });
-    } else {
-      // Fallback if autoTable is attached to jsPDF prototype
-      doc.autoTable({
-        head: [headers],
-        body: data,
-        startY: 35,
-        styles: { fontSize: 8 },
-        headStyles: { fillColor: [41, 157, 143] }
-      });
-    }
-    
-    doc.save(`students_data_${new Date().toISOString().split('T')[0]}.pdf`);
-    return true;
-  } catch (error) {
-    console.error('Error generating PDF file:', error);
-    
-    // Fallback: Create a simple PDF without autoTable
+  const downloadPDF = useCallback(async () => {
     try {
       const { jsPDF } = await import('jspdf');
+      // Import autoTable properly
+      const autoTableModule = await import('jspdf-autotable');
+      
       const doc = new jsPDF();
       const studentData = formatStudentData();
       
+      if (studentData.length === 0) {
+        throw new Error('No student data available');
+      }
+      
+      // Add title
       doc.setFontSize(16);
-      doc.text('Student Data Export', 20, 20);
+      doc.text('Student Data Export', 14, 15);
+      
+      // Add export date
       doc.setFontSize(10);
-      doc.text(`Exported on: ${new Date().toLocaleDateString()}`, 20, 30);
-      doc.text(`Total Students: ${studentData.length}`, 20, 40);
+      doc.text(`Exported on: ${new Date().toLocaleDateString()}`, 14, 22);
+      doc.text(`Total Students: ${studentData.length}`, 14, 28);
       
-      let yPosition = 50;
-      studentData.forEach((student, index) => {
-        if (yPosition > 280) {
-          doc.addPage();
-          yPosition = 20;
-        }
-        
-        doc.text(`${index + 1}. ${student['Registration Number']}: ${student['First Name']} ${student['Last Name']}`, 20, yPosition);
-        yPosition += 10;
-      });
+      // Prepare table data
+      const headers = Object.keys(studentData[0] || {});
+      const data = studentData.map(student => Object.values(student));
       
-      doc.save(`students_data_simple_${new Date().toISOString().split('T')[0]}.pdf`);
+      // Use autoTable properly - check if it's a function or needs to be called differently
+      if (typeof autoTableModule.default === 'function') {
+        autoTableModule.default(doc, {
+          head: [headers],
+          body: data,
+          startY: 35,
+          styles: { fontSize: 8 },
+          headStyles: { fillColor: [41, 157, 143] }
+        });
+      } else {
+        // Fallback if autoTable is attached to jsPDF prototype
+        doc.autoTable({
+          head: [headers],
+          body: data,
+          startY: 35,
+          styles: { fontSize: 8 },
+          headStyles: { fillColor: [41, 157, 143] }
+        });
+      }
+      
+      doc.save(`students_data_${new Date().toISOString().split('T')[0]}.pdf`);
       return true;
-    } catch (fallbackError) {
-      console.error('Fallback PDF generation also failed:', fallbackError);
-      throw new Error('Failed to generate PDF file. If problem persists, kindly report issue.');
+    } catch (error) {
+      console.error('Error generating PDF file:', error);
+      
+      // Fallback: Create a simple PDF without autoTable
+      try {
+        const { jsPDF } = await import('jspdf');
+        const doc = new jsPDF();
+        const studentData = formatStudentData();
+        
+        doc.setFontSize(16);
+        doc.text('Student Data Export', 20, 20);
+        doc.setFontSize(10);
+        doc.text(`Exported on: ${new Date().toLocaleDateString()}`, 20, 30);
+        doc.text(`Total Students: ${studentData.length}`, 20, 40);
+        
+        let yPosition = 50;
+        studentData.forEach((student, index) => {
+          if (yPosition > 280) {
+            doc.addPage();
+            yPosition = 20;
+          }
+          
+          doc.text(`${index + 1}. ${student['Registration Number']}: ${student['First Name']} ${student['Last Name']}`, 20, yPosition);
+          yPosition += 10;
+        });
+        
+        doc.save(`students_data_simple_${new Date().toISOString().split('T')[0]}.pdf`);
+        return true;
+      } catch (fallbackError) {
+        console.error('Fallback PDF generation also failed:', fallbackError);
+        throw new Error('Failed to generate PDF file. If problem persists, kindly report issue.');
+      }
     }
-  }
-}, [formatStudentData]);
+  }, [formatStudentData]);
 
   const handleDownload = async () => {
     if (!canDownload) return;
@@ -3628,221 +3656,263 @@ const TemplateSettingsPage = ({ settingsData, loading, error, darkMode, onUpdate
     );
   };
 
-  // Dashboard Page Component
-  const DashboardPage = ({ students, loading, error, darkMode, refreshData, settingsData, settingsLoading, institutionData, onSuccess }) => {
-    const [searchName, setSearchName] = useState('');
-    const [searchRegNo, setSearchRegNo] = useState('');
-    const [filterStatus, setFilterStatus] = useState('all');
-    const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
-    const { balancesData } = useBalancesData(token);
+// UPDATED: Dashboard Page Component with Cursor Pagination
+const DashboardPage = ({ darkMode, refreshData, settingsData, settingsLoading, institutionData, onSuccess }) => {
+  const [searchName, setSearchName] = useState('');
+  const [searchRegNo, setSearchRegNo] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [currentCursor, setCurrentCursor] = useState(null);
+  const [cursorHistory, setCursorHistory] = useState([]);
+  const [searchParams, setSearchParams] = useState({});
+  
+  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+  const { balancesData } = useBalancesData(token);
+  const { students, error, isLoading, pagination } = useStudentsData(token, currentCursor, searchParams);
 
-    const debouncedSetSearchName = useCallback(debounce(setSearchName, 300), []);
-    const debouncedSetSearchRegNo = useCallback(debounce(setSearchRegNo, 300), []);
+  const debouncedSetSearchName = useCallback(debounce((value) => {
+    setSearchName(value);
+  }, 300), []);
 
-    // Calculate summary stats
-    const summaryStats = useMemo(() => {
-      if (!students) {
-        return {
-          totalSubmitted: 0,
-          pending: 0,
-          processing: 0,
-          ready: 0,
-          expected: 0
-        };
-      }
+  const debouncedSetSearchRegNo = useCallback(debounce((value) => {
+    setSearchRegNo(value);
+  }, 300), []);
 
-      const totalSubmitted = students.length;
-      const pending = students.filter(s => s.status === 'pending').length;
-      const processing = students.filter(s => s.status === 'processing').length;
-      const ready = students.filter(s => s.status === 'ready' || s.status === 'id_ready').length;
-      
-      // Get expected total from settings data
-      const settings = Array.isArray(settingsData) && settingsData.length > 0 ? settingsData[0] : null;
-      const expected = settings?.expected_total || 0;
+  // Update search params when filters change
+  useEffect(() => {
+    const params = {};
+    
+    if (searchName) {
+      params.search = searchName;
+    }
+    
+    if (searchRegNo) {
+      params.reg_no = searchRegNo;
+    }
+    
+    if (filterStatus !== 'all') {
+      params.status = filterStatus;
+    }
+    
+    setSearchParams(params);
+    setCurrentCursor(null); // Reset cursor when filters change
+    setCursorHistory([]);
+  }, [searchName, searchRegNo, filterStatus]);
 
-      return { totalSubmitted, pending, processing, ready, expected };
-    }, [students, settingsData]);
+  // Calculate summary stats
+  const summaryStats = useMemo(() => {
+    if (!students) {
+      return {
+        totalSubmitted: 0,
+        pending: 0,
+        processing: 0,
+        ready: 0,
+        expected: 0
+      };
+    }
 
-    // Filter students based on search and status
-    const filteredStudents = useMemo(() => {
-      if (!students) return [];
-      
-      return students.filter(student => {
-        const nameMatch = searchName === '' || 
-          `${student.first_name} ${student.last_name}`.toLowerCase().includes(searchName.toLowerCase());
-        const regNoMatch = searchRegNo === '' || 
-          student.reg_no.toLowerCase().includes(searchRegNo.toLowerCase());
-        const statusMatch = filterStatus === 'all' || student.status === filterStatus;
-        
-        return nameMatch && regNoMatch && statusMatch;
-      });
-    }, [students, searchName, searchRegNo, filterStatus]);
+    const totalSubmitted = students.length;
+    const pending = students.filter(s => s.status === 'pending' || s.status === 'application_received').length;
+    const processing = students.filter(s => s.status === 'processing').length;
+    const ready = students.filter(s => s.status === 'ready' || s.status === 'id_ready').length;
+    
+    // Get expected total from settings data
+    const settings = Array.isArray(settingsData) && settingsData.length > 0 ? settingsData[0] : null;
+    const expected = settings?.expected_total || 0;
 
-    const getStatusInfo = (status) => {
-      return statusMap[status] || statusMap.default;
-    };
+    return { totalSubmitted, pending, processing, ready, expected };
+  }, [students, settingsData]);
 
-    const resultCount = filteredStudents.length;
-    const hasFilters = searchName || searchRegNo || filterStatus !== 'all';
+  const getStatusInfo = (status) => {
+    return statusMap[status] || statusMap.default;
+  };
 
-    // NEW: Check if balancesData is an empty object or empty array
-    const isEmptyBalanceData = useMemo(() => {
-      if (!balancesData) return true;
-      
-      if (Array.isArray(balancesData)) {
-        return balancesData.length === 0;
-      }
-      
-      if (typeof balancesData === 'object') {
-        return Object.keys(balancesData).length === 0;
-      }
-      
-      return false;
-    }, [balancesData]);
+  const resultCount = students?.length || 0;
+  const hasFilters = searchName || searchRegNo || filterStatus !== 'all';
 
-    return (
-      <div className="space-y-6 md:space-y-8">
-        {/* Payment Balance Section - Only show if not empty */}
-        {!isEmptyBalanceData && (
-          <PaymentBalanceSection 
-            darkMode={darkMode}
-            institutionData={institutionData}
-            onSuccess={onSuccess}
-          />
-        )}
+  // Pagination handlers
+  const handleNextPage = () => {
+    if (pagination?.next) {
+      setCursorHistory(prev => [...prev, currentCursor]);
+      // Extract cursor from next URL
+      const nextUrl = new URL(pagination.next);
+      const nextCursor = nextUrl.searchParams.get('cursor');
+      setCurrentCursor(nextCursor);
+    }
+  };
 
-        {/* Registration Links Section */}
-        <RegistrationLinksSection 
+  const handlePreviousPage = () => {
+    if (cursorHistory.length > 0) {
+      const previousCursor = cursorHistory[cursorHistory.length - 1];
+      setCursorHistory(prev => prev.slice(0, -1));
+      setCurrentCursor(previousCursor);
+    }
+  };
+
+  const handleFirstPage = () => {
+    setCurrentCursor(null);
+    setCursorHistory([]);
+  };
+
+  // NEW: Check if balancesData is an empty object or empty array
+  const isEmptyBalanceData = useMemo(() => {
+    if (!balancesData) return true;
+    
+    if (Array.isArray(balancesData)) {
+      return balancesData.length === 0;
+    }
+    
+    if (typeof balancesData === 'object') {
+      return Object.keys(balancesData).length === 0;
+    }
+    
+    return false;
+  }, [balancesData]);
+
+  return (
+    <div className="space-y-6 md:space-y-8">
+      {/* Payment Balance Section - Only show if not empty */}
+      {!isEmptyBalanceData && (
+        <PaymentBalanceSection 
           darkMode={darkMode}
           institutionData={institutionData}
-          settingsData={settingsData}
           onSuccess={onSuccess}
         />
+      )}
 
-        {/* NEW: Student Data Download Section */}
-        <StudentDataDownload
-          students={students}
-          settingsData={settingsData}
-          balancesData={balancesData}
-          darkMode={darkMode}
-          onSuccess={onSuccess}
+      {/* Registration Links Section */}
+      <RegistrationLinksSection 
+        darkMode={darkMode}
+        institutionData={institutionData}
+        settingsData={settingsData}
+        onSuccess={onSuccess}
+      />
+
+      {/* NEW: Student Data Download Section */}
+      <StudentDataDownload
+        students={students}
+        settingsData={settingsData}
+        balancesData={balancesData}
+        darkMode={darkMode}
+        onSuccess={onSuccess}
+      />
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6">
+        <StatCard 
+          title="Expected Total" 
+          value={settingsLoading ? '...' : summaryStats.expected.toLocaleString()} 
+          icon={<Clock />} 
+          darkMode={darkMode} 
         />
+        <StatCard 
+          title="Total Students Submitted" 
+          value={isLoading ? '...' : summaryStats.totalSubmitted.toLocaleString()} 
+          icon={<Users />} 
+          darkMode={darkMode} 
+        />
+        <StatCard 
+          title="Processing" 
+          value={isLoading ? '...' : summaryStats.processing.toLocaleString()} 
+          icon={<Activity />} 
+          darkMode={darkMode} 
+        />
+        <StatCard 
+          title="Ready for Delivery" 
+          value={isLoading ? '...' : summaryStats.ready.toLocaleString()} 
+          icon={<CheckCircle />} 
+          darkMode={darkMode} 
+        />
+      </div>
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6">
-          <StatCard 
-            title="Expected Total" 
-            value={settingsLoading ? '...' : summaryStats.expected.toLocaleString()} 
-            icon={<Clock />} 
-            darkMode={darkMode} 
-          />
-          <StatCard 
-            title="Total Students Submitted" 
-            value={loading ? '...' : summaryStats.totalSubmitted.toLocaleString()} 
-            icon={<Users />} 
-            darkMode={darkMode} 
-          />
-          <StatCard 
-            title="Processing" 
-            value={loading ? '...' : summaryStats.processing.toLocaleString()} 
-            icon={<Activity />} 
-            darkMode={darkMode} 
-          />
-          <StatCard 
-            title="Ready for Delivery" 
-            value={loading ? '...' : summaryStats.ready.toLocaleString()} 
-            icon={<CheckCircle />} 
-            darkMode={darkMode} 
-          />
+      {/* Student Submissions Table */}
+      <div className={`p-4 md:p-6 rounded-2xl shadow-md ${darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'}`}>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 space-y-4 md:space-y-0">
+          <h3 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+            Student Submissions
+          </h3>
+          <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 w-full md:w-auto gap-4">
+            <div className="relative">
+              <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} size={16} />
+              <input
+                type="text"
+                placeholder="Search by name..."
+                className={`pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent w-full sm:w-48 ${
+                  darkMode 
+                    ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
+                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+                }`}
+                onChange={(e) => debouncedSetSearchName(e.target.value)}
+              />
+            </div>
+            <div className="relative">
+              <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} size={16} />
+              <input
+                type="text"
+                placeholder="Search by reg no..."
+                className={`pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent w-full sm:w-48 ${
+                  darkMode 
+                    ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
+                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+                }`}
+                onChange={(e) => debouncedSetSearchRegNo(e.target.value)}
+              />
+            </div>
+            <div className="relative">
+              <Filter className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} size={16} />
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className={`pl-10 pr-8 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent appearance-none w-full sm:w-40 ${
+                  darkMode 
+                    ? 'bg-gray-700 border-gray-600 text-white' 
+                    : 'bg-white border-gray-300 text-gray-900'
+                }`}
+              >
+                <option value="all">All Status</option>
+                <option value="application_received">Pending</option>
+                <option value="processing">Processing</option>
+                <option value="id_ready">Ready</option>
+              </select>
+              <ChevronDown className={`absolute right-3 top-1/2 transform -translate-y-1/2 ${darkMode ? 'text-gray-400' : 'text-gray-500'} pointer-events-none`} size={16} />
+            </div>
+          </div>
         </div>
 
-        {/* Student Submissions Table */}
-        <div className={`p-4 md:p-6 rounded-2xl shadow-md ${darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'}`}>
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 space-y-4 md:space-y-0">
-            <h3 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-              Student Submissions
-            </h3>
-            <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 w-full md:w-auto gap-4">
-              <div className="relative">
-                <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} size={16} />
-                <input
-                  type="text"
-                  placeholder="Search by name..."
-                  className={`pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent w-full sm:w-48 ${
-                    darkMode 
-                      ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
-                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-                  }`}
-                  onChange={(e) => debouncedSetSearchName(e.target.value)}
-                />
-              </div>
-              <div className="relative">
-                <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} size={16} />
-                <input
-                  type="text"
-                  placeholder="Search by reg no..."
-                  className={`pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent w-full sm:w-48 ${
-                    darkMode 
-                      ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
-                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-                  }`}
-                  onChange={(e) => debouncedSetSearchRegNo(e.target.value)}
-                />
-              </div>
-              <div className="relative">
-                <Filter className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} size={16} />
-                <select
-                  value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value)}
-                  className={`pl-10 pr-8 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent appearance-none w-full sm:w-40 ${
-                    darkMode 
-                      ? 'bg-gray-700 border-gray-600 text-white' 
-                      : 'bg-white border-gray-300 text-gray-900'
-                  }`}
-                >
-                  <option value="all">All Status</option>
-                  <option value="application_received">Pending</option>
-                  <option value="id_processing">Processing</option>
-                  <option value="id_ready">Ready</option>
-                </select>
-                <ChevronDown className={`absolute right-3 top-1/2 transform -translate-y-1/2 ${darkMode ? 'text-gray-400' : 'text-gray-500'} pointer-events-none`} size={16} />
-              </div>
+        {/* Results summary */}
+        <div className={`mb-4 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+          {hasFilters ? (
+            <span>Showing {resultCount} students (filtered results)</span>
+          ) : (
+            <span>Showing {resultCount} students</span>
+          )}
+        </div>
+
+        {isLoading ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-teal-500"></div>
+          </div>
+        ) : error ? (
+          <div className="p-4 bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-300">
+            <div className="flex items-center">
+              <AlertTriangle className="mr-2" size={20} />
+              <p>Error loading students: {error.message}</p>
             </div>
           </div>
-
-          {/* Results summary */}
-          <div className={`mb-4 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-            {hasFilters ? (
-              <span>Showing {resultCount} of {students?.length || 0} students</span>
-            ) : (
-              <span>Total: {students?.length || 0} students</span>
-            )}
-          </div>
-
-          {loading ? (
-            <div className="flex justify-center items-center h-64">
-              <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-teal-500"></div>
-            </div>
-          ) : error ? (
-            <div className="p-4 bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-300">
-              <div className="flex items-center">
-                <AlertTriangle className="mr-2" size={20} />
-                <p>Error loading students: {error.message}</p>
-              </div>
-            </div>
-          ) : filteredStudents.length > 0 ? (
+        ) : students && students.length > 0 ? (
+          <>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[600px]">
                 <thead className={`${darkMode ? 'bg-gray-700/50 border-b border-gray-600' : 'bg-gray-50 border-b border-gray-200'}`}>
                   <tr>
                     <th className={`p-3 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Student Name</th>
                     <th className={`p-3 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Registration Number</th>
+                    <th className={`p-3 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Course</th>
                     <th className={`p-3 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Submission Date</th>
                     <th className={`p-3 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Status</th>
                   </tr>
                 </thead>
                 <tbody className={`divide-y ${darkMode ? 'divide-gray-700' : 'divide-gray-200'}`}>
-                  {filteredStudents.map(student => (
+                  {students.map(student => (
                     <tr key={student.id} className={`${darkMode ? 'hover:bg-gray-700/30' : 'hover:bg-gray-50/50'} transition-colors`}>
                       <td className="p-3 whitespace-nowrap">
                         <div className="flex items-center">
@@ -3855,6 +3925,7 @@ const TemplateSettingsPage = ({ settingsData, loading, error, darkMode, onUpdate
                         </div>
                       </td>
                       <td className={`p-3 text-sm whitespace-nowrap ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{student.reg_no}</td>
+                      <td className={`p-3 text-sm whitespace-nowrap ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{student.course}</td>
                       <td className={`p-3 text-sm whitespace-nowrap ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                         {student.created_at ? new Date(student.created_at).toLocaleDateString() : 'N/A'}
                       </td>
@@ -3869,18 +3940,72 @@ const TemplateSettingsPage = ({ settingsData, loading, error, darkMode, onUpdate
                 </tbody>
               </table>
             </div>
-          ) : (
-            <div className="text-center py-8">
-              <Users className={`mx-auto mb-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} size={48} />
-              <p className={`${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                {hasFilters ? 'No students match your search criteria' : 'No student submissions found'}
-              </p>
-            </div>
-          )}
-        </div>
+
+            {/* Pagination Controls */}
+            {(pagination?.next || pagination?.previous) && (
+              <div className="flex justify-between items-center mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex-1 flex justify-start">
+                  <button
+                    onClick={handleFirstPage}
+                    disabled={!cursorHistory.length}
+                    className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                      cursorHistory.length
+                        ? 'bg-teal-600 text-white hover:bg-teal-700' 
+                        : 'bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-400'
+                    }`}
+                  >
+                    First Page
+                  </button>
+                </div>
+
+                <div className="flex items-center space-x-4">
+                  <button
+                    onClick={handlePreviousPage}
+                    disabled={!pagination?.previous}
+                    className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center ${
+                      pagination?.previous
+                        ? 'bg-teal-600 text-white hover:bg-teal-700' 
+                        : 'bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-400'
+                    }`}
+                  >
+                    <ChevronLeft size={16} className="mr-1" />
+                    Previous
+                  </button>
+
+                  <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                    Page {cursorHistory.length + 1}
+                  </span>
+
+                  <button
+                    onClick={handleNextPage}
+                    disabled={!pagination?.next}
+                    className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center ${
+                      pagination?.next
+                        ? 'bg-teal-600 text-white hover:bg-teal-700' 
+                        : 'bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-400'
+                    }`}
+                  >
+                    Next
+                    <ChevronRight size={16} className="ml-1" />
+                  </button>
+                </div>
+
+                <div className="flex-1"></div>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="text-center py-8">
+            <Users className={`mx-auto mb-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} size={48} />
+            <p className={`${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+              {hasFilters ? 'No students match your search criteria' : 'No student submissions found'}
+            </p>
+          </div>
+        )}
       </div>
-    );
-  };
+    </div>
+  );
+};
 
 // Notifications Page Component - UPDATED (Removed Report Issue functionality)
 const NotificationsPage = ({ notificationsData, loading, error, darkMode, onMarkAsRead }) => {
@@ -4085,7 +4210,6 @@ const InstitutionDashboard = () => {
 
   // Data fetching hooks
   const { institutionData, institutionError, institutionLoading, mutateInstitution } = useInstitutionData(token);
-  const { students, error: studentsError, isLoading: studentsLoading, mutate: refreshStudents } = useStudentsData(token);
   const { settingsData, settingsError, settingsLoading, mutateSettings } = useSettingsData(token);
   const { notificationsData, notificationsError, notificationsLoading, mutateNotifications } = useNotificationsData(token);
   const { balancesData } = useBalancesData(token);
@@ -4191,11 +4315,7 @@ const InstitutionDashboard = () => {
         />;
       default:
         return <DashboardPage 
-          students={students} 
-          loading={studentsLoading} 
-          error={studentsError} 
           darkMode={darkMode} 
-          refreshData={refreshStudents}
           settingsData={settingsData}
           settingsLoading={settingsLoading}
           institutionData={institutionData}

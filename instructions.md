@@ -1,5 +1,123 @@
 # INSTRUCTIONS
-Use an alternative library for xlsx and produce similar results
+The api generating students data has been updated to paginate data as below:
+
+# Cursor Pagination Outputs for Instipass
+
+---
+
+# 1️⃣ First Page (Initial Load)
+Condition: No cursor sent, students > page_size
+
+{
+  "next": "http://127.0.0.1:8000/institution/api/students/?cursor=ENC123",
+  "previous": null,
+  "results": [
+    {"id": 48, "first_name": "Justo", "last_name": "Momanyi", ...},
+    {"id": 35, "first_name": "Willow", "last_name": "Rew", ...}
+  ]
+}
+Explanation: First page, next cursor exists, no previous.
+
+---
+
+# 2️⃣ Middle Page
+Condition: Cursor sent, more students after this page
+
+{
+  "next": "http://127.0.0.1:8000/institution/api/students/?cursor=ENC124",
+  "previous": "http://127.0.0.1:8000/institution/api/students/?cursor=ENC123",
+  "results": [
+    {"id": 34, "first_name": "Wilkins", "last_name": "Ondari", ...},
+    {"id": 33, "first_name": "Willow", "last_name": "Kjdchb", ...}
+  ]
+}
+Explanation: Middle page, both next and previous exist.
+
+---
+
+# 3️⃣ Last Page
+Condition: Cursor sent, no more students after this batch
+
+{
+  "next": null,
+  "previous": "http://127.0.0.1:8000/institution/api/students/?cursor=ENC124",
+  "results": [
+    {"id": 27, "first_name": "Wilkins", "last_name": "Ondari", ...}
+  ]
+}
+Explanation: Last page, next is null, previous points to previous batch.
+
+---
+
+# 4️⃣ Single Page (All records fit)
+Condition: Total students <= page_size
+
+{
+  "next": null,
+  "previous": null,
+  "results": [
+    {"id": 48, "first_name": "Justo", "last_name": "Momanyi", ...},
+    {"id": 35, "first_name": "Willow", "last_name": "Rew", ...}
+  ]
+}
+Explanation: All records in one page, no next/previous.
+
+---
+
+# 5️⃣ Empty Dataset
+Condition: No students exist
+
+{
+  "next": null,
+  "previous": null,
+  "results": []
+}
+Explanation: Empty dataset, pagination still valid.
+
+---
+
+# 6️⃣ Filtered Query, First Page
+Condition: Filter applied, results > page_size
+
+{
+  "next": "http://127.0.0.1:8000/institution/api/students/?course=CIVIL&cursor=ENC125",
+  "previous": null,
+  "results": [
+    {"id": 35, "first_name": "Willow", "course": "CIVIL", ...},
+    {"id": 34, "first_name": "Wilkins", "course": "CIVIL", ...}
+  ]
+}
+Explanation: Filtered first page, next exists, previous null.
+
+---
+
+# 7️⃣ Filtered Last Page
+Condition: Filter applied, last page
+
+{
+  "next": null,
+  "previous": "http://127.0.0.1:8000/institution/api/students/?course=CIVIL&cursor=ENC125",
+  "results": [
+    {"id": 30, "first_name": "Will", "course": "CIVIL", ...}
+  ]
+}
+Explanation: Filtered last page, next null, previous points to prior filtered batch.
+
+---
+
+# Summary Table
+
+| Scenario                        | next       | previous   | results                         |
+|---------------------------------|------------|------------|---------------------------------|
+| First page, more results        | exists     | null       | first batch                     |
+| Middle page                      | exists     | exists     | current batch                   |
+| Last page                        | null       | exists     | last batch                       |
+| Single page dataset              | null       | null       | all records                     |
+| Empty dataset                     | null       | null       | []                               |
+| Filtered, first page             | exists     | null       | first filtered batch             |
+| Filtered, last page              | null       | exists     | last filtered batch              |
+
+Adjust the frontend to be consistent with the backend, ensure the ui's consistency and the existing search and filter functionalitites remain intact
 
 # CODE
 "use client";
@@ -16,8 +134,7 @@ import {
   Search, 
   Activity, 
   Clock, 
-  Bank,
-  ShieldCheck, 
+
   AlertTriangle, 
   CheckCircle, 
   ChevronDown, 
@@ -28,7 +145,7 @@ import {
   Menu, 
   X,
   RefreshCw,
-  Share2,
+
   CreditCard,
   DollarSign,
   Calendar,
@@ -37,9 +154,9 @@ import {
   Download,
   Upload,
   Image as ImageIcon,
-  MessageSquare,
+
   Info,
-  Banknote,
+
   Building,
   MapPin,
   Mail,
@@ -444,7 +561,7 @@ const StudentDataDownload = ({ students, settingsData, balancesData, darkMode, o
       return true;
     } catch (error) {
       console.error('Error generating Excel file:', error);
-      throw new Error('Failed to generate Excel file');
+      throw new Error('Failed to generate Excel file if error persists, kindly report the issue.');
     }
   }, [formatStudentData]);
 
@@ -529,7 +646,7 @@ const downloadPDF = useCallback(async () => {
       return true;
     } catch (fallbackError) {
       console.error('Fallback PDF generation also failed:', fallbackError);
-      throw new Error('Failed to generate PDF file');
+      throw new Error('Failed to generate PDF file. If problem persists, kindly report issue.');
     }
   }
 }, [formatStudentData]);
@@ -596,7 +713,7 @@ const downloadPDF = useCallback(async () => {
         const isWithinProximity = Math.abs(actualTotal - expectedTotal) <= (expectedTotal * proximityThreshold);
         
         if (!isWithinProximity) {
-          reasons.push(`Student count (${actualTotal}) is not within 10% of expected total (${expectedTotal})`);
+          reasons.push(`Student count (${actualTotal}) is not within 90% of expected total (${expectedTotal})`);
         }
       }
     }
@@ -3841,6 +3958,7 @@ const TemplateSettingsPage = ({ settingsData, loading, error, darkMode, onUpdate
                   <tr>
                     <th className={`p-3 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Student Name</th>
                     <th className={`p-3 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Registration Number</th>
+                    <th className={`p-3 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Course</th>
                     <th className={`p-3 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Submission Date</th>
                     <th className={`p-3 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Status</th>
                   </tr>
@@ -3859,6 +3977,7 @@ const TemplateSettingsPage = ({ settingsData, loading, error, darkMode, onUpdate
                         </div>
                       </td>
                       <td className={`p-3 text-sm whitespace-nowrap ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{student.reg_no}</td>
+                      <td className={`p-3 text-sm whitespace-nowrap ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{student.course}</td>
                       <td className={`p-3 text-sm whitespace-nowrap ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                         {student.created_at ? new Date(student.created_at).toLocaleDateString() : 'N/A'}
                       </td>
